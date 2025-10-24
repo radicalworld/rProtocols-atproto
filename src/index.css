@@ -1,0 +1,15 @@
+/* src/index.css */
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@plugin "tailwindcss-animate";
+
+/* Put any custom CSS AFTER the import; keep it simple first. */
+/* You can add @apply later once everything compiles. */
+
+body {
+  /* If @apply complains, use raw CSS first */
+  background-color: white;
+  color: #171717; /* neutral-900-ish */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

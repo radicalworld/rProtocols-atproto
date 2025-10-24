@@ -1,0 +1,78 @@
+
+
+
+
+/* ============================================================================
+   LINEAGE
+============================================================================ */
+export const protocolLineage: Record<string, { previousVersion: string | null; forkOf: string | null; children: string[] }> = {
+  "protocol-creation": { previousVersion: "0.9", forkOf: null, children: ["protocol-creation-v2"] }
+  // (rest truncated for brevity)
+};
+
+/* ============================================================================
+   HELPERS
+============================================================================ */
+export function latestVersion(id: string): string | undefined {
+  return protocolReleases[id]?.current;
+}
+
+export function listReleases(id: string): Release[] {
+  const bucket = protocolReleases[id];
+  if (!bucket) return [];
+  return Object.values(bucket.releases).sort((a, b) => {
+    const [amaj, amin] = a.version.split(".").map(Number);
+    const [bmaj, bmin] = b.version.split(".").map(Number);
+    if (bmaj !== amaj) return bmaj - amaj;
+    return bmin - amin;
+  });
+}
+
+export function getRelease(id: string, version?: string): Release | undefined {
+  const bucket = protocolReleases[id];
+  if (!bucket) return undefined;
+  const v = version ?? bucket.current;
+  return v ? bucket.releases[v] : undefined;
+}
+
+/* ============================================================================
+   COLLECTIONS
+============================================================================ */
+export const collections = {
+  draftsAndRCs: [
+    { id: "protocol-follow", version: "0.6" },
+    { id: "protocol-publishing", version: "0.9" },
+    { id: "protocol-onboarding", version: "0.7" },
+    { id: "protocol-creation-v2", version: "2.0" },
+    { id: "protocol-adoption-lite", version: "0.3" }
+  ],
+  mostAdopted: [
+    { id: "protocol-adoption", version: "1.0" },
+    { id: "protocol-index", version: "1.2" },
+    { id: "protocol-comms", version: "1.2" },
+    { id: "protocol-attribution", version: "1.1" }
+  ],
+  recentChanges: [
+    { id: "protocol-creation", version: "1.0", changed: "2025-10-10" },
+    { id: "protocol-publishing", version: "0.9", changed: "2025-10-13" },
+    { id: "protocol-evolution", version: "0.8", changed: "2025-10-12" }
+  ]
+};
+
+/* ============================================================================
+   SPOTLIGHTS / DRAFTS
+============================================================================ */
+export const spotlightProtocols = [
+  { id: "protocol-creation", version: "1.0" },
+  { id: "protocol-trust", version: "1.0" }
+];
+
+export const protocolDrafts: Record<string, string> = {
+  "protocol-follow": `# Protocol Follow (next)
+- Add per-thread mute + digest frequency.
+- Explore per-tag follow to reduce noise.`,
+
+  "protocol-creation-v2": `# Protocol Creation v2 (next)
+- Experiment: async-only review with acceptance criteria.
+- Add “examples-first” scaffold.`
+};
