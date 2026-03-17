@@ -3,10 +3,14 @@ import { useRepo } from "@/domain/repo";
 import type { Protocol } from "@/domain/types";
 import { ProtocolActions } from "@/features/needs/ProtocolActions";
 import { FollowEye } from "@/features/marks/FollowEye";
-import { Link } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 
-export function SuiteContents({ suiteId }: { suiteId: string }) {
+export function SuiteContents({ suiteId, suiteSlug, onSelectProtocol }: { suiteId: string; suiteSlug?: string; onSelectProtocol?: (protocolId: string) => void }) {
   const repo = useRepo();
+  const location = useLocation();
+  const pathParts = location.pathname.split("/").filter(Boolean);
+  const section = pathParts[0] || "collaboration";
+  const effectiveSuiteSlug = suiteSlug || suiteId;
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   useEffect(() => {
     let m = true;
@@ -25,9 +29,18 @@ export function SuiteContents({ suiteId }: { suiteId: string }) {
         <li key={p.id} className="flex items-start justify-between gap-2">
           <div>
             <div className="text-sm font-medium">
-                <Link to={`/protocol/${encodeURIComponent(p.slug ?? p.id)}`} className="hover:underline">
-                    {p.title}
-                </Link>
+                {onSelectProtocol ? (
+                    <button 
+                        onClick={(e) => { e.preventDefault(); onSelectProtocol(p.id); }} 
+                        className="hover:underline text-left"
+                    >
+                        {p.title}
+                    </button>
+                ) : (
+                    <Link to={`/${section}/protocols/${encodeURIComponent(p.id)}?suite=${effectiveSuiteSlug}`} className="hover:underline">
+                        {p.title}
+                    </Link>
+                )}
             </div>
             {p.summary && <div className="text-xs text-gray-600">{p.summary}</div>}
           </div>

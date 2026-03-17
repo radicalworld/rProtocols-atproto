@@ -1,6 +1,7 @@
 import { AtpAgent } from "@atproto/api";
 import type { RPReadPort, RPWritePort } from "@/domain/ports";
 import type { Mark, MarkVerb } from "@/domain/types";
+import type { NeedRelease } from "@/features/needs/lib/releases";
 
 // ---- collections used in rProtocols ----
 const NS = {
@@ -127,7 +128,107 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
     async listSections() { return []; }
     async getNeedsBySection() { return []; }
     async getNeedTree() { return null as any; }
+    async getNeedByRootId() { return null; }
+    async getNeedByVersion() { return null; }
     async getSuitesForNeed() { return []; }
     async getProtocolsForNeed() { return []; }
     async getSuiteProtocols() { return []; }
+
+    // Protocol stub resolvers
+    async resolveProtocolSlug() { return null; }
+    async getProtocolBySlug() { return null; }
+    async getProtocolByVersion() { return null; }
+    async getProtocolByCid() { return null; }
+    
+    // Write port stubs
+    async createNeed(): Promise<any> { throw new Error("Method not implemented."); }
+    async createProtocol(): Promise<any> { throw new Error("Method not implemented."); }
+    async linkProtocolServesNeed(): Promise<any> { throw new Error("Method not implemented."); }
+    async addProtocolToSuite(): Promise<any> { throw new Error("Method not implemented."); }
+
+    // ---------- Needs write operations (Publishing) ----------
+    async updateNeedDraft(rootId: string, version: string, patch: Partial<NeedRelease>): Promise<void> {
+        if (!this.viewerDid) return;
+
+        // In a real implementation, we would fetch the existing record first to merge.
+        // For this hybrid implementation, the mock handles state, we just echo a new putRecord.
+        // We use rootId as the rkey namespace (or generate a specific rkey based on version).
+        
+        const rkey = `${rootId}-v${version.replace(".", "-")}`;
+
+        try {
+            await this.agent.com.atproto.repo.putRecord({
+                repo: this.viewerDid,
+                collection: "org.rp.need",
+                rkey: rkey,
+                record: {
+                    $type: "org.rp.need",
+                    rootId: rootId,
+                    version: version,
+                    stage: "draft",
+                    date: new Date().toISOString().split("T")[0],
+                    language: patch.language ?? "en",
+                    provenance: {
+                        authorDid: this.viewerDid,
+                        signature: undefined,
+                    },
+                    question: patch.title ?? "Draft Title",
+                    description: patch.description ?? "",
+                    purpose: patch.purpose ?? "",
+                subject: {
+                    subjectKind: "org.rp.need",
+                    subjectRootId: rootId,
+                    actorDid: this.viewerDid
+                },
+                relations: {
+                        parentRootId: undefined,
+                        childRootIds: [],
+                        suiteIds: patch.tags?.length ? [patch.tags[0]] : [],
+                        relatedProtocols: [],
+                    },
+                    tags: patch.tags ?? [],
+                    connectivity: { shortUrl: "", qrCode: "" },
+                    attribution: [],
+                    history: [],
+                    changeDescription: "",
+                    endOfLifeAt: undefined,
+                    archived: false,
+                    createdAt: new Date().toISOString(),
+                },
+            });
+            
+            console.log(`PDS: Successfully broadcasted org.rp.need draft update to PDS under rkey: ${rkey}`);
+        } catch (e: any) {
+            console.error("PDS Save Error:", e);
+            throw e; // re-throw so the UI hook knows it failed
+        }
+    }
+
+    async promoteNeedVersion(rootId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string): Promise<void> {
+        if (!this.viewerDid) return;
+        
+        const rkey = `${rootId}-v${version.replace(".", "-")}`;
+        
+        try {
+            // Fetch existing draft to preserve its content
+            const existing = await this.agent.com.atproto.repo.getRecord({
+                repo: this.viewerDid,
+                collection: "org.rp.need",
+                rkey: rkey
+            });
+
+            const record = existing.data.value as any;
+            record.stage = toStage;
+            if (changeDescription) record.changeDescription = changeDescription;
+
+            await this.agent.com.atproto.repo.putRecord({
+                repo: this.viewerDid,
+                collection: "org.rp.need",
+                rkey: rkey,
+                record: record
+            });
+        } catch (e) {
+            console.error("Failed to promote need version on PDS:", e);
+        }
+    }
 }

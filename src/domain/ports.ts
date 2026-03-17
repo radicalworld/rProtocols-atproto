@@ -9,6 +9,8 @@ export interface RPReadPort {
     listSections(): Promise<{ id: SectionId; title: string; intro: string }[]>;
     getNeedsBySection(section: SectionId): Promise<Need[]>;
     getNeedTree(needId: NeedId): Promise<NeedNode>;
+    getNeedByRootId?(rootId: string): Promise<Need | null>;
+    getNeedByVersion?(rootId: string, version: string): Promise<Need | null>;
     getSuitesForNeed(needId: NeedId): Promise<Suite[]>;
     getProtocolsForNeed(needId: NeedId): Promise<Protocol[]>;
     getSuiteProtocols(suiteId: SuiteId): Promise<Protocol[]>;
@@ -29,7 +31,7 @@ export interface RPWritePort {
     unfollow(subjectId: string): Promise<void>;
     adopt(subjectId: string, context?: string): Promise<void>;
     unadopt?(subjectId: string): Promise<void>;
-    createNeed(payload: Pick<Need, "title" | "description" | "parentId">): Promise<NeedId>;
+    createNeed(payload: Pick<Need, "title" | "description" | "parentRootId">): Promise<NeedId>;
     createProtocol(payload: Pick<Protocol, "title" | "summary" | "body">): Promise<ProtocolId>;
     linkProtocolServesNeed(protocolId: ProtocolId, needId: NeedId): Promise<void>;
     addProtocolToSuite(protocolId: ProtocolId, suiteId: SuiteId): Promise<void>;
@@ -37,6 +39,10 @@ export interface RPWritePort {
     createProtocolRoot?(root: ProtocolRoot): Promise<ProtocolRoot>;
     publishProtocolVersion?(v: ProtocolVersion): Promise<ProtocolVersion>;
     renameProtocolSlug?(rootId: string, newSlug: string): Promise<void>;
+    
+    // Need Editing & Publishing
+    updateNeedDraft(rootId: string, version: string, patch: any): Promise<void>;
+    promoteNeedVersion(rootId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string): Promise<void>;
 }
 
 // ---------- REPOSITORY (combined) ----------

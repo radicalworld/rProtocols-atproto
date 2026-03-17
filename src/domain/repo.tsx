@@ -34,6 +34,15 @@ export function RepoProvider({ children, repo }: { children: React.ReactNode; re
             hybrid.unfollow = at.unfollow.bind(at);
             hybrid.adopt = at.adopt?.bind(at) ?? (() => Promise.resolve());
             hybrid.unadopt = at.unadopt?.bind(at) ?? (() => Promise.resolve());
+            
+            // Need Editor Mutations -> PDS
+            hybrid.updateNeedDraft = async (rootId: string, version: string, patch: any) => {
+                return at.updateNeedDraft(rootId, version, patch);
+            };
+            hybrid.promoteNeedVersion = async (rootId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string) => {
+                return at.promoteNeedVersion(rootId, version, toStage, changeDescription);
+            };
+            
             return hybrid as RPRepository;
         }
  

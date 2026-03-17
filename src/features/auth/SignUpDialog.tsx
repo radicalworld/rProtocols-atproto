@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { UserPlus } from "lucide-react";
 import { useSession } from "@/features/auth/SessionProvider";
 
-export default function SignUpDialog() {
+export default function SignUpDialog({ onOpenChange }: { onOpenChange?: (open: boolean) => void } = {}) {
   const { signUp, busy, error, setError, session } = useSession();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -14,7 +14,12 @@ export default function SignUpDialog() {
   const [inviteCode, setInviteCode] = useState("");
 
   // Close automatically once authenticated
-  useEffect(() => { if (session && open) setOpen(false); }, [session, open]);
+  useEffect(() => { 
+      if (session && open) {
+          setOpen(false); 
+          onOpenChange?.(false);
+      }
+  }, [session, open, onOpenChange]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,11 +31,18 @@ export default function SignUpDialog() {
       password,
       inviteCode: inviteCode || undefined,
     });
-    if (ok) setOpen(false);
+    if (ok) {
+        setOpen(false);
+        onOpenChange?.(false);
+    }
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) setError(null); }}>
+    <Dialog open={open} onOpenChange={(v) => { 
+        setOpen(v); 
+        onOpenChange?.(v);
+        if (v) setError(null); 
+    }}>
       <DialogTrigger asChild>
         <Button size="sm" variant="outline" className="rounded-2xl">
           <UserPlus className="mr-1 h-4 w-4" /> Sign up

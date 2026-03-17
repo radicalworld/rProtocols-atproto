@@ -11,6 +11,8 @@ import { getNeedRelease, latestNeedVersion, listNeedReleases } from "@/features/
 import NeedBadge from "@/features/needs/components/NeedBadge";
 import { NeedVersionSwitcher } from "@/features/needs/components/NeedVersionSwitcher";
 import { useNeed, useNeedReleases } from "@/features/needs/hooks";
+import { Button } from "@/components/ui/button";
+import { Edit } from "lucide-react";
 
 export function NeedProfile() {
   const { rootId = "" } = useParams();
@@ -46,8 +48,8 @@ export function NeedProfile() {
   if (!n) return <div className="mx-auto max-w-3xl p-6">Loading need…</div>;
 
   // version info
-  const selectedVersion = parsed.ver ?? latestNeedVersion(n.id) ?? "1.0";
-  const release = getNeedRelease(n.id, selectedVersion);
+  const selectedVersion = parsed.ver ?? latestNeedVersion(n.rootId) ?? "1.0";
+  const release = getNeedRelease(n.rootId, selectedVersion);
   const versionString = release?.version ?? selectedVersion;
   const { major, minor } = parseVersion(versionString);
   const uiStage = release?.stage ?? (major === 0 ? "draft" : "stable");
@@ -63,7 +65,7 @@ export function NeedProfile() {
   const attribution = release?.attribution ?? [];
   const history = release?.history ?? [];
   const date = release?.date ?? "";
-  const versions = listNeedReleases(n.id);
+  const versions = listNeedReleases(n.rootId);
 
   return (
     <article className="mx-auto max-w-3xl space-y-6 p-6">
@@ -71,7 +73,11 @@ export function NeedProfile() {
         <div className="flex items-start justify-between">
           <h1 className="text-2xl font-semibold">{n.title}</h1>
           <div className="flex items-center gap-2">
-            <FollowEye subjectId={n.id} label="Follow need" />
+            <Button variant="outline" size="sm" onClick={() => nav(`/needs/${encodeURIComponent(n.rootId)}/edit`)}>
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Option
+            </Button>
+            <FollowEye subjectId={n.rootId} label="Follow need" />
           </div>
         </div>
 

@@ -1,7 +1,7 @@
 // ==============================
 // Core Section IDs
 // ==============================
-export type SectionId = "root" | "work" | "website";
+export type SectionId = "collaboration" | "work" | "website";
 
 // ==============================
 // Entity IDs

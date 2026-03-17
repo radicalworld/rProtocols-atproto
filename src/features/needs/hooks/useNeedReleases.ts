@@ -1,48 +1,55 @@
 // src/features/needs/hooks/useNeedReleases.ts
 import { useEffect, useMemo, useState, useCallback } from "react";
-import {
-  primeNeedReleases,
-  listNeedReleases,
-  latestNeedVersion,
-  getNeedRelease,
-  type NeedRelease,
-} from "@/features/needs/lib/releases";
+import { type NeedRelease } from "@/features/needs/lib/releases";
+
+import { useRepo } from "@/domain/repo";
 
 export function useNeedReleases(rootId: string | undefined) {
+  const repo = useRepo();
   const [loading, setLoading] = useState(true);
   const [error, setError]   = useState<string | null>(null);
-  const [tick, setTick]     = useState(0); // bump to re-read caches
+  const [releases, setReleases] = useState<NeedRelease[]>([]);
+  const [latest, setLatest] = useState<string | undefined>();
+  const [tick, setTick]     = useState(0);
 
   const refresh = useCallback(async () => {
     if (!rootId) return;
     setLoading(true);
     setError(null);
     try {
-      await primeNeedReleases(rootId); // populates client-side caches
-      setTick(t => t + 1);             // re-read cached values
+      // For mock, we only have one release which is the root Need itself
+      const needData = await repo.getNeedByRootId?.(rootId);
+      if (needData) {
+        const rel: NeedRelease = {
+           rootId: rootId,
+           version: "1.0",
+           stage: "stable",
+           title: needData.title,
+           description: needData.description,
+           purpose: needData.purpose || "",
+           language: "en",
+           tags: []
+        };
+        setReleases([rel]);
+        setLatest("1.0");
+      } else {
+        setReleases([]);
+        setLatest(undefined);
+      }
+      setTick(t => t + 1);
     } catch (e: any) {
       setError(e?.message ?? "Failed to load releases");
     } finally {
       setLoading(false);
     }
-  }, [rootId]);
+  }, [rootId, repo]);
 
   useEffect(() => { setLoading(true); setError(null); }, [rootId]);
   useEffect(() => { if (rootId) void refresh(); }, [rootId, refresh]);
 
-  const releases = useMemo<NeedRelease[]>(
-    () => (rootId ? listNeedReleases(rootId) : []),
-    [rootId, tick]
-  );
-
-  const latest = useMemo<string | undefined>(
-    () => (rootId ? latestNeedVersion(rootId) : undefined),
-    [rootId, tick]
-  );
-
   const get = useCallback(
-    (version?: string) => (rootId ? getNeedRelease(rootId, version) : undefined),
-    [rootId, tick]
+    (version?: string) => releases.find(r => r.version === version) || releases[0],
+    [releases, tick]
   );
 
   return { releases, latest, get, loading, error, refresh };

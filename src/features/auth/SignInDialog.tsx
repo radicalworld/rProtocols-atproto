@@ -7,19 +7,20 @@ import { Input } from "@/components/ui/input";
 import { LogIn } from "lucide-react";
 import { useSession } from "@/features/auth/SessionProvider";
 
-export default function SignInDialog() {
-    const { signIn, busy, error, setError, user } = useSession();
+export default function SignInDialog({ onOpenChange }: { onOpenChange?: (open: boolean) => void } = {}) {
+    const { signIn, busy, error, setError, session } = useSession();
     const [open, setOpen] = useState(false);
     const [identifier, setIdentifier] = useState("");
     const [password, setPassword] = useState("");
 
     // ✅ Close automatically once we have a user
     useEffect(() => {
-        if (user && open) {
+        if (session && open) {
             setOpen(false);
+            onOpenChange?.(false);
             setPassword(""); // reset sensitive input
         }
-    }, [user, open]);
+    }, [session, open, onOpenChange]);
 
     async function onSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -44,7 +45,13 @@ export default function SignInDialog() {
     }
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog 
+            open={open} 
+            onOpenChange={(val) => {
+                setOpen(val);
+                onOpenChange?.(val);
+            }}
+        >
             <DialogTrigger asChild>
                 <Button size="sm" className="rounded-2xl">
                 <LogIn className="mr-1 h-4 w-4" /> Sign in

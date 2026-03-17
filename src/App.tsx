@@ -73,7 +73,7 @@ function clearIdentity() {
 
 function ContributionsPage() {
   return (
-    <div className="mx-auto max-w-5xl p-4">
+    <div className="w-full px-4 lg:px-6">
       <h1 className="text-2xl font-semibold">MyContributions</h1>
       <p className="text-gray-600">Authored, edited, followed, and adopted items will appear here.</p>
     </div>
@@ -90,9 +90,9 @@ export default function App() {
         <Routes>
             {/* Core sections */}
             <Route path="/" element={<HomePage />} />
-            <Route path="/root" element={<SectionPage section="root" />} />
-            <Route path="/work" element={<SectionPage section="work" />} />
-            <Route path="/website" element={<SectionPage section="website" />} />
+            <Route path="/collaboration/*" element={<SectionPage section="collaboration" />} />
+            <Route path="/work/*" element={<SectionPage section="work" />} />
+            <Route path="/website/*" element={<SectionPage section="website" />} />
             
             {/* Suites & Protocols */}
             <Route path="/suite/:id" element={<SuiteProfile />} />

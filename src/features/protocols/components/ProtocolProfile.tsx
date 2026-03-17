@@ -13,8 +13,9 @@ import ProtocolBadge from "@/features/protocols/components/ProtocolBadge";
 import { ProtocolVersionSwitcher } from "@/features/protocols/components/ProtocolVersionSwitcher";
 import { useNavigate } from "react-router-dom";
 
-export function ProtocolProfile() {
-    const { id = "" } = useParams();
+export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } = {}) {
+    const { id: paramId = "" } = useParams();
+    const id = propId || paramId;
     const nav = useNavigate();
     const repo = useRepo();
     const [p, setP] = useState<Protocol | null>(null);

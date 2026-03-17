@@ -7,19 +7,29 @@ export function ListCard({
         empty,
         actionRenderer,
         expandedRenderer,
+        onItemClick,
+        activeItem,
         max = 6,
     }: {
         title: string;
         items: { id: string; title: string; subtitle?: string }[];
         empty: string;
-        actionRenderer?: (id: string, isOpen: boolean) => React.ReactNode; // ⬅️ pass isOpen
+        actionRenderer?: (id: string, isOpen: boolean) => React.ReactNode;
         expandedRenderer?: (id: string) => React.ReactNode;
+        onItemClick?: (id: string) => void;
+        activeItem?: string | null;
         max?: number;
     }) {
         
     const [openId, setOpenId] = useState<string | null>(null);
     const visible = items.slice(0, max);
     const extra = items.length - visible.length;
+
+    // determine if an item is open via controlled prop OR local state
+    const isItemOpen = (itemId: string, itemSlug: string) => {
+        if (activeItem === itemSlug || activeItem === itemId) return true;
+        return openId === itemId;
+    };
 
     return (
         <div className="rounded-xl border bg-gray-50 p-4">
@@ -33,18 +43,29 @@ export function ListCard({
         ) : (
             <ul className="space-y-2">
             {visible.map((it) => {
-                const isOpen = openId === it.id;
+                const itemSlug = encodeURIComponent(it.title.replace(/\s+/g, '_'));
+                const isOpen = isItemOpen(it.id, itemSlug);
                 return (
                 <li key={it.id} className="group rounded-lg border bg-white">
                     <div
                         role="button"
                         tabIndex={0}
                         className="flex w-full items-start justify-between gap-2 p-3 text-left"
-                        onClick={() => setOpenId(isOpen ? null : it.id)}
+                        onClick={() => {
+                            if (onItemClick) {
+                                onItemClick(it.id);
+                            } else {
+                                setOpenId(isOpen ? null : it.id);
+                            }
+                        }}
                         onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
                                 e.preventDefault();
-                                setOpenId(isOpen ? null : it.id);
+                                if (onItemClick) {
+                                    onItemClick(it.id);
+                                } else {
+                                    setOpenId(isOpen ? null : it.id);
+                                }
                             }
                         }}
                         aria-expanded={isOpen}

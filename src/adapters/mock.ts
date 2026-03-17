@@ -1,18 +1,35 @@
 import { nanoid } from "nanoid";
 import type { RPRepository, RPReadPort, RPWritePort } from "@/domain/ports";
 import type {
-    SectionId, NeedId, SuiteId, ProtocolId, Need, NeedNode, Suite, Protocol, Mark, MarkVerb,
+    SectionId, NeedId, SuiteId, ProtocolId, Need, NeedNode, NeedRelease, Suite, Protocol, Mark, MarkVerb,
     ProtocolRoot, ProtocolVersion, ProtocolRootId
 } from "@/domain/types";
 import { needs as seedNeeds, suites as seedSuites, protocols as seedProtocols, marks as seedMarks } from "@/data/seeds";
 import { cidString } from "@/lib/cid";
-import { canonicalize } from "@/lib/canonical";
 import { parseVersion } from "@/lib/version";
 
 // In-memory stores (cloned so we can mutate)
 const needs: Record<string, Need> = JSON.parse(JSON.stringify(seedNeeds));
+for (const n of Object.values(needs)) {
+    if ((n as any).id && !n.rootId) n.rootId = (n as any).id;
+    if ((n as any).parentId !== undefined && n.parentRootId === undefined) n.parentRootId = (n as any).parentId;
+    if ((n as any).childIds && !n.childRootIds) n.childRootIds = (n as any).childIds;
+    if ((n as any).protocolIds && !n.relatedProtocolIds) n.relatedProtocolIds = (n as any).protocolIds;
+    if (!n.language) n.language = "en";
+}
+
 const suites: Record<string, Suite> = JSON.parse(JSON.stringify(seedSuites));
+for (const s of Object.values(suites)) {
+    if ((s as any).id && !s.rootId) s.rootId = (s as any).id;
+    if ((s as any).protocolIds && !s.includeProtocols) s.includeProtocols = (s as any).protocolIds.map((id: string) => ({ rootId: id }));
+}
+
+
 const protocols: Record<string, Protocol> = JSON.parse(JSON.stringify(seedProtocols));
+for (const p of Object.values(protocols)) {
+    if (!(p as any).id && (p as any).rootId) (p as any).id = (p as any).rootId;
+}
+
 const marks: Record<string, Mark> = JSON.parse(JSON.stringify(seedMarks));
 
 // ---- Simple root/version indexes bootstrapped from protocols ----
@@ -58,38 +75,51 @@ for (const p of Object.values(protocols)) {
 
 // Section registry
 const sectionMap: Record<SectionId, { title: string; intro: string; needIds: string[] }> = {
-    root: {
-        title: "Root",
-        intro: "These are the Root Protocols that ground openness, iteration, and trust.",
+    collaboration: {
+        title: "Collaboration",
+        intro: "These are the root protocols that ground openness, iteration, and trust.",
         needIds: ["root-open-protocols"]
-  },
+    },
     work: {
         title: "Work",
         intro: "Protocols that serve collaboration in work.",
         needIds: ["work-collaboration"]
-  },
+    },
     website: {
         title: "Website",
         intro: "Protocols that serve web presence and operations.",
         needIds: ["web-presence"]
-  }
+    }
 };
 
 // ---------- helpers ----------
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
 
+function toNeedRelease(n: Need): NeedRelease {
+    return {
+        ...n,
+        id: `release-${n.rootId}-latest`,
+        needRootId: n.rootId,
+        question: n.title,
+        purpose: n.purpose || "",
+        version: "1.0",
+        stage: "stable",
+        date: new Date().toISOString().split("T")[0]
+    };
+}
+
 function buildNeedNode(needId: NeedId): NeedNode {
     const n = needs[needId];
     return {
-        ...n,
-        children: n.childIds.map((cid) => needs[cid])
+        ...toNeedRelease(n),
+        children: n.childRootIds.map((cid) => toNeedRelease(needs[cid]))
     };
 }
 
 function protocolsForNeed(needId: NeedId): Protocol[] {
     const n = needs[needId];
-    const viaSuites = n.suiteIds.flatMap((sid) => suites[sid]?.protocolIds ?? []);
-    const all = new Set<string>([...n.protocolIds, ...viaSuites]);
+    const viaSuites = n.suiteIds.flatMap((sid) => suites[sid]?.includeProtocols?.map(p => p.rootId) ?? []);
+    const all = new Set<string>([...(n.relatedProtocolIds || []), ...viaSuites]);
     return Array.from(all).map((pid) => protocols[pid]).filter(Boolean);
 }
 
@@ -109,6 +139,14 @@ class MockAdapter implements RPRepository {
         if (!rootId) return null;
         const root = clone(protoRoots[rootId]);
         return { root, preferredSlug: root.slug };
+    }
+
+    async getNeedByRootId(rootId: string): Promise<Need | null> {
+        return (needs as any)[rootId] || null;
+    }
+
+    async getNeedByVersion(rootId: string, version: string): Promise<Need | null> {
+        return (needs as any)[rootId] || null; // Mock returns the same object for now
     }
 
     async getProtocolBySlug(slug: string) {
@@ -143,9 +181,9 @@ class MockAdapter implements RPRepository {
 
     async listSections() {
         return (Object.keys(sectionMap) as SectionId[]).map((id) => ({
-        id,
-        title: sectionMap[id].title,
-        intro: sectionMap[id].intro
+            id,
+            title: sectionMap[id].title,
+            intro: sectionMap[id].intro
         }));
     }
 
@@ -169,7 +207,7 @@ class MockAdapter implements RPRepository {
 
     async getSuiteProtocols(suiteId: SuiteId): Promise<Protocol[]> {
         const s = suites[suiteId];
-        return clone((s?.protocolIds ?? []).map((pid) => protocols[pid]).filter(Boolean));
+        return clone((s?.includeProtocols ?? []).map((p) => protocols[p.rootId]).filter(Boolean));
     }
 
     async getMarks(verb: MarkVerb): Promise<Mark[]> {
@@ -180,17 +218,19 @@ class MockAdapter implements RPRepository {
     async follow(subjectId: string): Promise<void> {
         const id = nanoid();
         marks[id] = {
-        id,
-        verb: "follow",
-        subjectId,
-        status: "active",
-        createdAt: new Date().toISOString()
+            id,
+            verb: "follow",
+            subjectKind: "protocol",
+            subjectRootId: subjectId,
+            actorDid: "did:web:mock-user",
+            status: "active",
+            createdAt: new Date().toISOString()
         };
     }
 
     async unfollow(subjectId: string): Promise<void> {
         const entry = Object.values(marks).find(
-            (m) => m.verb === "follow" && m.subjectId === subjectId && m.status === "active"
+            (m) => m.verb === "follow" && m.subjectRootId === subjectId && m.status === "active"
         );
         if (entry) {
             delete marks[entry.id];
@@ -200,58 +240,63 @@ class MockAdapter implements RPRepository {
     async adopt(subjectId: string, context?: string): Promise<void> {
         const id = nanoid();
         marks[id] = {
-        id,
-        verb: "adopt",
-        subjectId,
-        status: "active",
-        context,
-        createdAt: new Date().toISOString()
+            id,
+            verb: "adopt",
+            subjectKind: "protocol",
+            subjectRootId: subjectId,
+            actorDid: "did:web:mock-user",
+            status: "active",
+            context,
+            createdAt: new Date().toISOString()
         };
     }
 
     async unadopt(subjectId: string): Promise<void> {
         const entry = Object.values(marks).find(
-            (m) => m.verb === "adopt" && m.subjectId === subjectId && m.status === "active"
+            (m) => m.verb === "adopt" && m.subjectRootId === subjectId && m.status === "active"
         );
         if (entry) {
             delete marks[entry.id];
         }
     }
 
-    async createNeed(payload: Pick<Need, "title" | "description" | "parentId">): Promise<NeedId> {
+    async createNeed(payload: Pick<Need, "title" | "description" | "parentRootId">): Promise<NeedId> {
         const id = payload.title.toLowerCase().replace(/\s+/g, "-");
         const newNeed: Need = {
-        id,
-        title: payload.title,
-        description: payload.description,
-        parentId: payload.parentId ?? null,
-        childIds: [],
-        suiteIds: [],
-        protocolIds: []
+            rootId: id,
+            language: "en",
+            title: payload.title,
+            description: payload.description,
+            parentRootId: payload.parentRootId ?? null,
+            childRootIds: [],
+            suiteIds: [],
+            relatedProtocolIds: []
         };
         needs[id] = newNeed;
-        if (payload.parentId && needs[payload.parentId]) {
-        needs[payload.parentId].childIds.push(id);
+        if (payload.parentRootId && needs[payload.parentRootId]) {
+            needs[payload.parentRootId].childRootIds.push(id);
         }
         return id;
     }
 
     async createProtocol(payload: Pick<Protocol, "title" | "summary" | "body">): Promise<ProtocolId> {
         const id = payload.title.toLowerCase().replace(/\s+/g, "-");
-        protocols[id] = { id, title: payload.title, summary: payload.summary, body: payload.body };
+        protocols[id] = { id, title: payload.title, summary: payload.summary, body: payload.body || "" };
         return id;
     }
 
     async linkProtocolServesNeed(protocolId: ProtocolId, needId: NeedId): Promise<void> {
         if (!needs[needId] || !protocols[protocolId]) return;
         const n = needs[needId];
-        if (!n.protocolIds.includes(protocolId)) n.protocolIds.push(protocolId);
+        if (!n.relatedProtocolIds) n.relatedProtocolIds = [];
+        if (!n.relatedProtocolIds.includes(protocolId)) n.relatedProtocolIds.push(protocolId);
     }
 
     async addProtocolToSuite(protocolId: ProtocolId, suiteId: SuiteId): Promise<void> {
         if (!suites[suiteId] || !protocols[protocolId]) return;
         const s = suites[suiteId];
-        if (!s.protocolIds.includes(protocolId)) s.protocolIds.push(protocolId);
+        if (!s.includeProtocols) s.includeProtocols = [];
+        if (!s.includeProtocols.some(p => p.rootId === protocolId)) s.includeProtocols.push({ rootId: protocolId });
     }
 
     async publishProtocolVersion(v: ProtocolVersion): Promise<ProtocolVersion> {
@@ -259,12 +304,12 @@ class MockAdapter implements RPRepository {
         const { major } = parseVersion(v.version);
         const stage = v.stage ?? (major === 0 ? "draft" : "stable");
 
-        const content = canonicalize(v.content);
-        const cid = await cidString(content);
-  
+        const contentStr = JSON.stringify(v.content);
+        const cid = await cidString(contentStr);
+
         const next: ProtocolVersion = {
             ...v,
-            content,
+            content: v.content,
             cid,
             stage,
             createdAt: new Date().toISOString(),
@@ -281,6 +326,22 @@ class MockAdapter implements RPRepository {
         }
 
         return clone(next);
+    }
+    
+    // --- Need Editing (Mocks) ---
+    async updateNeedDraft(rootId: string, version: string, patch: any): Promise<void> {
+        const root = needs[rootId];
+        if (!root) throw new Error("Need not found in mock store");
+
+        // mock.ts stores Need, not NeedRelease/NeedRoot, so we mutate root directly for local demo.
+        if (patch.title !== undefined) root.title = patch.title; 
+        if (patch.description !== undefined) root.description = patch.description;
+        if (patch.purpose !== undefined) root.purpose = patch.purpose;
+        // ignoring tags/language for mock as it doesn't strictly hold them on the base Need type.
+    }
+
+    async promoteNeedVersion(rootId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string): Promise<void> {
+         // Do nothing for mock adapter
     }
 }
 
