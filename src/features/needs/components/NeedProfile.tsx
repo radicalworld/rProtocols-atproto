@@ -159,9 +159,15 @@ export function NeedProfile() {
 
       {/* Body */}
       {description ? (
-        <section
-          className="prose prose-zinc dark:prose-invert max-w-none
-                     prose-headings:font-semibold prose-p:my-1.5 prose-ul:pl-5 prose-ol:pl-5"
+        <section 
+          className="prose max-w-none pt-2 
+          prose-p:text-sm prose-p:text-gray-700 prose-p:leading-normal prose-p:mb-3
+          prose-headings:text-gray-900 prose-headings:font-semibold prose-headings:mt-6 prose-headings:mb-2
+          prose-h1:text-lg prose-h2:text-base prose-h3:text-sm
+          prose-ul:list-disc prose-ol:list-decimal prose-ul:pl-5 prose-ol:pl-5 prose-li:text-sm prose-li:text-gray-700 prose-li:mb-1.5
+          prose-strong:text-gray-900 prose-strong:font-semibold
+          prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline
+          marker:text-gray-400 dark:prose-invert"
         >
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{description}</ReactMarkdown>
         </section>

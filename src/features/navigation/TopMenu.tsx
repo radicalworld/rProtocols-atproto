@@ -88,7 +88,7 @@ export function TopMenu() {
                                     onClick={() => setIsLeftMenuOpen(false)}
                                     className={({ isActive }) =>
                                     `px-3 py-2 text-sm rounded-xl transition ${
-                                        isActive ? "bg-black text-white dark:bg-white dark:text-black font-medium" : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                                        isActive ? "bg-black text-white dark:bg-white dark:text-black font-medium" : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
                                     }`
                                     }
                                 >

@@ -16,6 +16,7 @@ export default function NeedEditorProfile({
     const [form, setForm] = useState({ title: "", description: "", purpose: "", language: "", tags: "" });
     const [saving, setSaving] = useState(false);
     const [msg, setMsg] = useState("");
+    const [isInitialized, setIsInitialized] = useState(false);
 
     // initialize form when release loads
     useEffect(() => {
@@ -27,12 +28,15 @@ export default function NeedEditorProfile({
                 language: release.language ?? "en",
                 tags: release.tags ? release.tags.join(", ") : "",
             });
+            // Delay rendering the Tiptap component until this state is flushed
+            requestAnimationFrame(() => setIsInitialized(true));
         }
     }, [release]);
 
     if (loading) return <div className="p-6">Loading editor…</div>;
     if (error) return <div className="p-6 text-red-600">{error}</div>;
     if (!release) return <div className="p-6">No draft available.</div>;
+    if (!isInitialized) return <div className="p-6 flex items-center gap-2"><div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /> Preparing editor…</div>;
 
     const canEdit = release.stage === "draft" || release.stage === "candidate";
 
@@ -74,11 +78,27 @@ export default function NeedEditorProfile({
                         {latest && latest !== release.version ? ` (latest is v${latest})` : ""}
                     </div>
                 </div>
-                {onClose && (
-                    <button onClick={onClose} className="rounded p-2 text-gray-500 hover:bg-gray-100 transition-colors">
-                        Cancel
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={onSave}
+                        disabled={!canEdit || saving}
+                        className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white shadow hover:bg-blue-700 transition disabled:opacity-50"
+                    >
+                        Save Draft
                     </button>
-                )}
+                    <button
+                        onClick={onPromoteCandidate}
+                        disabled={!canEdit || saving}
+                        className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow hover:bg-green-700 transition disabled:opacity-50"
+                    >
+                        Promote to Candidate
+                    </button>
+                    {onClose && (
+                        <button onClick={onClose} className="rounded p-2 text-sm text-gray-500 hover:bg-gray-100 transition-colors ml-2">
+                            Cancel
+                        </button>
+                    )}
+                </div>
             </header>
 
             {!canEdit && (
@@ -148,22 +168,7 @@ export default function NeedEditorProfile({
                 </div>
             </label>
 
-            <div className="flex gap-2">
-                <button
-                    onClick={onSave}
-                    disabled={!canEdit || saving}
-                    className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
-                >
-                    Save Draft
-                </button>
-                <button
-                    onClick={onPromoteCandidate}
-                    disabled={!canEdit || saving}
-                    className="rounded bg-green-600 px-4 py-2 text-white disabled:opacity-50"
-                >
-                    Promote to Candidate
-                </button>
-            </div>
+            {/* Action buttons moved to header */}
 
             {msg && <div className="text-sm text-gray-500">{msg}</div>}
         </div>

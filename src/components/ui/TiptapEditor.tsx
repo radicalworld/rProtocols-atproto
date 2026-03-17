@@ -25,17 +25,17 @@ const MenuBar = ({ editor, isRawMode, onToggleRawMode }: MenuBarProps) => {
     }
 
     return (
-        <div className="flex flex-wrap items-center gap-1 p-2 bg-gray-100 dark:bg-[#1a1a1a] border-b border-gray-200 dark:border-gray-800 shadow-sm sticky top-0 z-10 w-full text-gray-700 dark:text-gray-300">
+        <div className="flex flex-wrap items-center gap-1 p-2 bg-gray-100 border-b border-gray-200 shadow-sm sticky top-0 z-10 w-full text-gray-700 ">
             {/* Mode Toggle */}
             <button
                 onClick={onToggleRawMode}
-                className={`px-3 py-1.5 rounded text-xs font-bold transition-colors ${isRawMode ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${isRawMode ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 '}`}
                 title="Toggle Raw Source Edit"
                 type="button"
             >
                 {isRawMode ? 'Raw Source' : 'Raw Source'}
             </button>
-            <div className="w-px h-5 mx-1 bg-gray-300 dark:bg-gray-700"></div>
+            <div className="w-px h-5 mx-1 bg-gray-300 "></div>
 
             {/* If in raw mode, disable formatting buttons */}
             <div className={`flex flex-wrap items-center gap-1 ${isRawMode ? 'opacity-50 pointer-events-none' : ''}`}>
@@ -43,7 +43,7 @@ const MenuBar = ({ editor, isRawMode, onToggleRawMode }: MenuBarProps) => {
                 <button
                     onClick={() => editor.chain().focus().undo().run()}
                     disabled={!editor.can().chain().focus().undo().run()}
-                    className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-30"
+                    className="p-1.5 rounded-md hover:bg-gray-200 transition-colors disabled:opacity-30"
                     title="Undo"
                     type="button"
                 >
@@ -52,20 +52,20 @@ const MenuBar = ({ editor, isRawMode, onToggleRawMode }: MenuBarProps) => {
                 <button
                     onClick={() => editor.chain().focus().redo().run()}
                     disabled={!editor.can().chain().focus().redo().run()}
-                    className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-30"
+                    className="p-1.5 rounded-md hover:bg-gray-200 transition-colors disabled:opacity-30"
                     title="Redo"
                     type="button"
                 >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 7v6h-6"></path><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"></path></svg>
                 </button>
 
-                <div className="w-px h-5 mx-1 bg-gray-300 dark:bg-gray-700"></div>
+                <div className="w-px h-5 mx-1 bg-gray-300 "></div>
 
                 {/* Formatting */}
                 <button
                     onClick={() => editor.chain().focus().toggleBold().run()}
                     disabled={!editor.can().chain().focus().toggleBold().run()}
-                    className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive('bold') ? 'bg-gray-300 dark:bg-gray-600 font-bold' : ''}`}
+                    className={`p-1.5 rounded-md hover:bg-gray-200 transition-colors ${editor.isActive('bold') ? 'bg-gray-300 font-bold' : ''}`}
                     title="Bold"
                     type="button"
                 >
@@ -74,7 +74,7 @@ const MenuBar = ({ editor, isRawMode, onToggleRawMode }: MenuBarProps) => {
                 <button
                     onClick={() => editor.chain().focus().toggleItalic().run()}
                     disabled={!editor.can().chain().focus().toggleItalic().run()}
-                    className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive('italic') ? 'bg-gray-300 dark:bg-gray-600 font-bold' : ''}`}
+                    className={`p-1.5 rounded-md hover:bg-gray-200 transition-colors ${editor.isActive('italic') ? 'bg-gray-300 font-bold' : ''}`}
                     title="Italic"
                     type="button"
                 >
@@ -83,7 +83,7 @@ const MenuBar = ({ editor, isRawMode, onToggleRawMode }: MenuBarProps) => {
                 <button
                     onClick={() => editor.chain().focus().toggleStrike().run()}
                     disabled={!editor.can().chain().focus().toggleStrike().run()}
-                    className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive('strike') ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
+                    className={`p-1.5 rounded-md hover:bg-gray-200 transition-colors ${editor.isActive('strike') ? 'bg-gray-300 ' : ''}`}
                     title="Strikethrough"
                     type="button"
                 >
@@ -92,7 +92,7 @@ const MenuBar = ({ editor, isRawMode, onToggleRawMode }: MenuBarProps) => {
                 <button
                     onClick={() => editor.chain().focus().toggleCode().run()}
                     disabled={!editor.can().chain().focus().toggleCode().run()}
-                    className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive('code') ? 'bg-gray-300 dark:bg-gray-600 font-bold' : ''}`}
+                    className={`p-1.5 rounded-md hover:bg-gray-200 transition-colors ${editor.isActive('code') ? 'bg-gray-300 font-bold' : ''}`}
                     title="Code"
                     type="button"
                 >
@@ -113,18 +113,18 @@ const MenuBar = ({ editor, isRawMode, onToggleRawMode }: MenuBarProps) => {
                         }
                         editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
                     }}
-                    className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive('link') ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
+                    className={`p-1.5 rounded-md hover:bg-gray-200 transition-colors ${editor.isActive('link') ? 'bg-gray-300 ' : ''}`}
                     title="Link"
                     type="button"
                 >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
                 </button>
 
-                <div className="w-px h-5 mx-1 bg-gray-300 dark:bg-gray-700"></div>
+                <div className="w-px h-5 mx-1 bg-gray-300 "></div>
 
                 <button
                     onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-                    className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm font-bold ${editor.isActive('heading', { level: 1 }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
+                    className={`p-1.5 rounded-md hover:bg-gray-200 transition-colors text-sm font-bold ${editor.isActive('heading', { level: 1 }) ? 'bg-gray-300 ' : ''}`}
                     title="Heading 1"
                     type="button"
                 >
@@ -132,7 +132,7 @@ const MenuBar = ({ editor, isRawMode, onToggleRawMode }: MenuBarProps) => {
                 </button>
                 <button
                     onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-                    className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm font-bold ${editor.isActive('heading', { level: 2 }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
+                    className={`p-1.5 rounded-md hover:bg-gray-200 transition-colors text-sm font-bold ${editor.isActive('heading', { level: 2 }) ? 'bg-gray-300 ' : ''}`}
                     title="Heading 2"
                     type="button"
                 >
@@ -140,18 +140,18 @@ const MenuBar = ({ editor, isRawMode, onToggleRawMode }: MenuBarProps) => {
                 </button>
                 <button
                     onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-                    className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm font-bold ${editor.isActive('heading', { level: 3 }) ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
+                    className={`p-1.5 rounded-md hover:bg-gray-200 transition-colors text-sm font-bold ${editor.isActive('heading', { level: 3 }) ? 'bg-gray-300 ' : ''}`}
                     title="Heading 3"
                     type="button"
                 >
                     H3
                 </button>
 
-                <div className="w-px h-5 mx-1 bg-gray-300 dark:bg-gray-700"></div>
+                <div className="w-px h-5 mx-1 bg-gray-300 "></div>
 
                 <button
                     onClick={() => editor.chain().focus().toggleBulletList().run()}
-                    className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive('bulletList') ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
+                    className={`p-1.5 rounded-md hover:bg-gray-200 transition-colors ${editor.isActive('bulletList') ? 'bg-gray-300 ' : ''}`}
                     title="Bullet List"
                     type="button"
                 >
@@ -159,7 +159,7 @@ const MenuBar = ({ editor, isRawMode, onToggleRawMode }: MenuBarProps) => {
                 </button>
                 <button
                     onClick={() => editor.chain().focus().toggleOrderedList().run()}
-                    className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive('orderedList') ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
+                    className={`p-1.5 rounded-md hover:bg-gray-200 transition-colors ${editor.isActive('orderedList') ? 'bg-gray-300 ' : ''}`}
                     title="Numbered List"
                     type="button"
                 >
@@ -167,7 +167,7 @@ const MenuBar = ({ editor, isRawMode, onToggleRawMode }: MenuBarProps) => {
                 </button>
                 <button
                     onClick={() => editor.chain().focus().toggleBlockquote().run()}
-                    className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive('blockquote') ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
+                    className={`p-1.5 rounded-md hover:bg-gray-200 transition-colors ${editor.isActive('blockquote') ? 'bg-gray-300 ' : ''}`}
                     title="Quote"
                     type="button"
                 >
@@ -175,7 +175,7 @@ const MenuBar = ({ editor, isRawMode, onToggleRawMode }: MenuBarProps) => {
                 </button>
                 <button
                     onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-                    className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive('codeBlock') ? 'bg-gray-300 dark:bg-gray-600' : ''}`}
+                    className={`p-1.5 rounded-md hover:bg-gray-200 transition-colors ${editor.isActive('codeBlock') ? 'bg-gray-300 ' : ''}`}
                     title="Code Block"
                     type="button"
                 >
@@ -183,7 +183,7 @@ const MenuBar = ({ editor, isRawMode, onToggleRawMode }: MenuBarProps) => {
                 </button>
                 <button
                     onClick={() => editor.chain().focus().setHorizontalRule().run()}
-                    className={`p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors`}
+                    className={`p-1.5 rounded-md hover:bg-gray-200 transition-colors`}
                     title="Horizontal Rule"
                     type="button"
                 >
@@ -199,7 +199,7 @@ const TIPTAP_EXTENSIONS = [
     Link.configure({
         openOnClick: false,
         HTMLAttributes: {
-            class: 'text-blue-600 dark:text-blue-400 underline decoration-blue-500/30 hover:decoration-blue-500 underline-offset-2 transition-colors inline-block break-words max-w-full',
+            class: 'text-blue-600 underline decoration-blue-500/30 hover:decoration-blue-500 underline-offset-2 transition-colors inline-block break-words max-w-full',
             rel: 'noopener noreferrer',
             target: '_blank',
         },
@@ -224,7 +224,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         content: content,
         editorProps: {
             attributes: {
-                class: 'prose prose-neutral dark:prose-invert max-w-none min-h-[500px] w-full p-2 lg:p-4 outline-none',
+                class: 'prose prose-neutral max-w-none min-h-[500px] w-full p-2 lg:p-4 outline-none',
             },
         },
         onUpdate: ({ editor }) => {
@@ -257,14 +257,14 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
     };
 
     return (
-        <div className="flex flex-col w-full h-full relative overflow-hidden bg-white dark:bg-[#121212] border dark:border-gray-800 rounded">
+        <div className="flex flex-col w-full h-full relative overflow-hidden bg-white border border-input shadow-sm rounded-md">
             <MenuBar editor={editor} isRawMode={isRawMode} onToggleRawMode={handleToggleRawMode} />
             <div className="flex-1 w-full overflow-y-auto min-h-[500px]">
                 {isRawMode ? (
                     <textarea
                         value={content}
                         onChange={handleRawChange}
-                        className="w-full h-full p-4 lg:p-6 resize-none bg-transparent text-gray-900 dark:text-gray-100 font-mono text-sm leading-relaxed outline-none min-h-[500px]"
+                        className="w-full h-full p-4 lg:p-6 resize-none bg-transparent text-gray-900 font-mono text-sm leading-relaxed outline-none min-h-[500px]"
                         placeholder="Type raw Markdown or HTML..."
                     />
                 ) : (

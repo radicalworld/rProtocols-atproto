@@ -350,6 +350,8 @@ export interface ProtocolRelease {
 
   // --- Content ---
   protocolBody: string;               // Markdown (≤ 1024 chars recommended)
+  title?: string;                     // Snapshot override
+  summary?: string;                   // Snapshot override
 
   // Optional end-of-life nuance
   endOfLifeAt?: string;

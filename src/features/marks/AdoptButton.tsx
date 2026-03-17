@@ -1,4 +1,4 @@
-import { CheckSquare, Square } from "lucide-react";
+import { CheckCircle, Circle } from "lucide-react";
 import { useAdopted } from "./useAdopted";
 
 /**
@@ -22,9 +22,9 @@ export function AdoptButton({ subjectId, label, disabled }: { subjectId: string;
                         : "bg-transparent border-gray-200 text-gray-400 hover:text-gray-600 hover:border-gray-300"}`}
                     >
             {adopted ? (
-                <CheckSquare className="h-3.5 w-3.5 text-green-800" />
+                <CheckCircle className="h-3.5 w-3.5 text-green-800" />
             ) : (
-                <Square className="h-3.5 w-3.5 text-gray-400" />
+                <Circle className="h-3.5 w-3.5 text-gray-400" />
             )}
             <span className="sr-only">{adopted ? "Adopted" : "Adopt"}</span>
         </button>

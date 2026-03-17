@@ -2,6 +2,7 @@ import { AtpAgent } from "@atproto/api";
 import type { RPReadPort, RPWritePort } from "@/domain/ports";
 import type { Mark, MarkVerb } from "@/domain/types";
 import type { NeedRelease } from "@/features/needs/lib/releases";
+import { mockRepo } from "@/adapters/mock";
 
 // ---- collections used in rProtocols ----
 const NS = {
@@ -45,6 +46,9 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
             status: r.value?.status ?? "active",
             context: r.value?.context,
             createdAt: r.value?.createdAt ?? new Date().toISOString(),
+            subjectKind: "protocol", // assuming protocol for now since rProtocols marks protocols
+            subjectRootId: r.value?.subject?.uri,
+            actorDid: this.viewerDid ?? "",
         }));
     }
     
@@ -132,7 +136,11 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
     async getNeedByVersion() { return null; }
     async getSuitesForNeed() { return []; }
     async getProtocolsForNeed() { return []; }
-    async getSuiteProtocols() { return []; }
+    
+    // Fallback to mock logic temporarily so the app doesn't hang for signed-in users on local data
+    async getSuiteProtocols(suiteId: string) { 
+        return mockRepo.getSuiteProtocols(suiteId); 
+    }
 
     // Protocol stub resolvers
     async resolveProtocolSlug() { return null; }
@@ -229,6 +237,77 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
             });
         } catch (e) {
             console.error("Failed to promote need version on PDS:", e);
+        }
+    }
+
+    // ---------- Protocol write operations (Publishing) ----------
+    async updateProtocolDraft(rootId: string, version: string, patch: any): Promise<void> {
+        if (!this.viewerDid) return;
+
+        const rkey = `${rootId}-v${version.replace(".", "-")}`;
+        try {
+            await this.agent.com.atproto.repo.putRecord({
+                repo: this.viewerDid,
+                collection: "org.rp.protocol",
+                rkey: rkey,
+                record: {
+                    $type: "org.rp.protocol",
+                    rootId: rootId,
+                    version: version,
+                    stage: "draft",
+                    date: new Date().toISOString().split("T")[0],
+                    language: patch.language ?? "en",
+                    provenance: {
+                        authorDid: this.viewerDid,
+                    },
+                    title: patch.title ?? "Draft Title",
+                    summary: patch.summary ?? "",
+                    body: patch.body ?? "",
+                    subject: {
+                        subjectKind: "org.rp.protocol",
+                        subjectRootId: rootId,
+                        actorDid: this.viewerDid
+                    },
+                    relations: {
+                        needId: undefined, // Add correct mapping when available
+                        suiteIds: patch.tags?.length ? [patch.tags[0]] : [],
+                        relatedProtocols: [],
+                    },
+                    tags: patch.tags ?? [],
+                    connectivity: { shortUrl: "", qrCode: "" },
+                    attribution: [],
+                    history: [],
+                    changeDescription: "",
+                    createdAt: new Date().toISOString(),
+                },
+            });
+            console.log(`PDS: Successfully broadcasted org.rp.protocol draft update to PDS under rkey: ${rkey}`);
+        } catch (e: any) {
+            console.error("PDS Save Error (Protocol):", e);
+            throw e;
+        }
+    }
+
+    async promoteProtocolVersion(rootId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string): Promise<void> {
+        if (!this.viewerDid) return;
+        const rkey = `${rootId}-v${version.replace(".", "-")}`;
+        try {
+            const existing = await this.agent.com.atproto.repo.getRecord({
+                repo: this.viewerDid,
+                collection: "org.rp.protocol",
+                rkey: rkey
+            });
+            const record = existing.data.value as any;
+            record.stage = toStage;
+            if (changeDescription) record.changeDescription = changeDescription;
+            await this.agent.com.atproto.repo.putRecord({
+                repo: this.viewerDid,
+                collection: "org.rp.protocol",
+                rkey: rkey,
+                record: record
+            });
+        } catch (e) {
+            console.error("Failed to promote protocol version on PDS:", e);
         }
     }
 }

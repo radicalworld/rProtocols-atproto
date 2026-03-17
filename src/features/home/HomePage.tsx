@@ -1,9 +1,13 @@
 import { Link } from "react-router-dom";
+import { SeedNetworkButton } from "@/features/dev/SeedNetworkButton";
 
 export function HomePage() {
     return (
         <div className="w-full space-y-8 px-4 lg:px-6 py-6">
-            <h1 className="text-3xl font-semibold">rProtocols</h1>
+            <div className="flex justify-between items-center">
+                <h1 className="text-3xl font-semibold">rProtocols</h1>
+                <SeedNetworkButton />
+            </div>
             <p className="text-gray-700 w-full">
                 rProtocols are open, living agreements for how we collaborate and build together.
                 Each protocol is linked to a human <strong>Need</strong> — a question about how

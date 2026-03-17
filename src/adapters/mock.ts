@@ -7,6 +7,7 @@ import type {
 import { needs as seedNeeds, suites as seedSuites, protocols as seedProtocols, marks as seedMarks } from "@/data/seeds";
 import { cidString } from "@/lib/cid";
 import { parseVersion } from "@/lib/version";
+import { protocolReleases } from "@/data/releases";
 
 // In-memory stores (cloned so we can mutate)
 const needs: Record<string, Need> = JSON.parse(JSON.stringify(seedNeeds));
@@ -201,6 +202,15 @@ class MockAdapter implements RPRepository {
         return clone(n.suiteIds.map((sid) => suites[sid]).filter(Boolean));
     }
 
+    async getProtocols(): Promise<Protocol[]> {
+        return Object.keys(protocolReleases).map(id => ({
+            id,
+            title: protocolReleases[id][0].title,
+            summary: protocolReleases[id][0].summary,
+            body: protocolReleases[id][0].content,
+        }));
+    }
+
     async getProtocolsForNeed(needId: NeedId): Promise<Protocol[]> {
         return clone(protocolsForNeed(needId));
     }
@@ -341,6 +351,45 @@ class MockAdapter implements RPRepository {
     }
 
     async promoteNeedVersion(rootId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string): Promise<void> {
+         // Do nothing for mock adapter
+    }
+
+    // --- Protocol Editing (Mocks) ---
+    async updateProtocolDraft(rootId: string, version: string, patch: any): Promise<void> {
+        const proto = protocols[rootId];
+        if (!proto) throw new Error("Protocol not found in mock store");
+
+        if (patch.title !== undefined) proto.title = patch.title;
+        if (patch.summary !== undefined) proto.summary = patch.summary;
+        if (patch.body !== undefined) proto.body = patch.body;
+
+        // Also mutate the protocolReleases dictionary so `getRelease` reads the new payload
+        const bucket = (protocolReleases as any)[rootId];
+        if (bucket) {
+            // Find the closest matching version, or fallback to current
+            const targetVersion = bucket.releases[version] ? version : bucket.current;
+            const release = bucket.releases[targetVersion];
+            if (release) {
+                if (patch.body !== undefined) release.protocolBody = patch.body;
+                if (patch.title !== undefined) release.title = patch.title;
+                if (patch.summary !== undefined) release.summary = patch.summary;
+            }
+        }
+
+        // Must update protoVersionsByCid because `getProtocolBySlug` reads from there!
+        const prRootId = slugToRootId[rootId];
+        const root = prRootId ? protoRoots[prRootId] : null;
+        if (root && root.latestCid) {
+            const pv = protoVersionsByCid[root.latestCid];
+            if (pv) {
+                if (patch.title !== undefined) pv.content.title = patch.title;
+                if (patch.summary !== undefined) pv.content.summary = patch.summary;
+                if (patch.body !== undefined) pv.content.body = patch.body;
+            }
+        }
+    }
+
+    async promoteProtocolVersion(rootId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string): Promise<void> {
          // Do nothing for mock adapter
     }
 }

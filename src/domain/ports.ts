@@ -17,6 +17,7 @@ export interface RPReadPort {
     getMarks(verb: MarkVerb): Promise<Mark[]>;
     // Lookups for full views + resolvers (prep for slug/version/CID)
     getProtocol(id: string): Promise<Protocol | null>;
+    getProtocols(): Promise<Protocol[]>;
     getSuite(id: string): Promise<Suite | null>;
     // New resolvers (non-breaking; optional in adapters)
     resolveProtocolSlug(slug: string): Promise<{ root: ProtocolRoot; preferredSlug: string } | null>;
@@ -43,6 +44,10 @@ export interface RPWritePort {
     // Need Editing & Publishing
     updateNeedDraft(rootId: string, version: string, patch: any): Promise<void>;
     promoteNeedVersion(rootId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string): Promise<void>;
+
+    // Protocol Editing & Publishing
+    updateProtocolDraft(rootId: string, version: string, patch: any): Promise<void>;
+    promoteProtocolVersion(rootId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string): Promise<void>;
 }
 
 // ---------- REPOSITORY (combined) ----------

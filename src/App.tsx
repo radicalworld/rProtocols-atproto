@@ -19,6 +19,7 @@ import { NeedProfile } from "@/features/needs/components/NeedProfile";          
 import NeedVersionProfile from "@/features/needs/components/NeedVersionProfile";            // /needs/:rootId/v/:version
 import NeedEditorProfile from "@/features/needs/components/NeedEditorProfile";             // /needs/:rootId/edit
 import NewNeedProfile from "@/features/needs/components/NewNeedProfile";                   // /needs/new
+import { SeedNetworkButton } from "@/features/dev/SeedNetworkButton";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // RW DID utilities (pilot/mock)
@@ -76,6 +77,9 @@ function ContributionsPage() {
     <div className="w-full px-4 lg:px-6">
       <h1 className="text-2xl font-semibold">MyContributions</h1>
       <p className="text-gray-600">Authored, edited, followed, and adopted items will appear here.</p>
+      <div className="mt-8">
+         <SeedNetworkButton />
+      </div>
     </div>
   );
 }
