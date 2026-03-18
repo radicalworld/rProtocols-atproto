@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Plus } from "lucide-react";
 import { useRepo } from "@/domain/repo";
 import type { SectionId, Need, Suite, Protocol } from "@/domain/types";
 import { Routes, Route, useNavigate, useLocation, useParams, Link, Outlet } from "react-router-dom";
@@ -58,11 +59,21 @@ function LayoutShell({ section }: { section: SectionId }) {
     );
 }
 
+function CountBubble({ count }: { count: number }) {
+    return (
+        <span className="ml-1 inline-flex items-center justify-center bg-gray-100 text-gray-500 rounded-full px-1.5 min-w-[20px] h-[20px] text-[10px] font-bold tracking-normal">
+            {count}
+        </span>
+    );
+}
+
 function ContextSidebar({ section, suiteId, protocolId, needId }: { section: SectionId, suiteId: string | null, protocolId: string | null, needId: string | null }) {
     const repo = useRepo();
+    const nav = useNavigate();
     const [suites, setSuites] = useState<Suite[]>([]);
     const [protocols, setProtocols] = useState<Protocol[]>([]);
     const [subNeeds, setSubNeeds] = useState<Need[]>([]);
+    const [rootNeed, setRootNeed] = useState<Need | null>(null);
 
     useEffect(() => {
         let mounted = true;
@@ -97,20 +108,31 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
             // Deduplicate protocols
             const uniqueProtocols = Array.from(new Map(allProtocols.map(p => [p.id, p])).values());
 
+            const rNeed = await repo.getNeedByLineageId(section);
+
             if (mounted) {
                 setSuites(uniqueSuites);
                 setProtocols(uniqueProtocols);
                 setSubNeeds(allSubNeeds);
+                if (rNeed) setRootNeed(rNeed);
             }
         })();
         return () => { mounted = false; };
     }, [repo, section]);
 
     // Tailwind details styles for accordions
-    const detailsSummaryClass = "px-5 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-600 transition-colors select-none group-open:mb-2 focus:outline-none list-none [&::-webkit-details-marker]:hidden";
+    const detailsSummaryClass = "px-5 py-3 text-[11px] font-semibold text-gray-500 hover:text-gray-900 uppercase tracking-wider cursor-pointer transition-colors select-none group-open:mb-2 focus:outline-none list-none [&::-webkit-details-marker]:hidden flex items-center justify-between";
 
     return (
         <div className="flex flex-col h-full py-2">
+            {rootNeed && (
+                <div className="px-5 py-4 mb-2 border-b border-gray-100 flex items-center justify-between">
+                    <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
+                        {rootNeed.title}
+                    </h2>
+                </div>
+            )}
+            
             <div className="flex-1 overflow-y-auto space-y-2">
                 
                 {/* Suites Accordion */}
@@ -118,11 +140,18 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
                     <summary className={detailsSummaryClass}>
                         <span className="flex items-center gap-1.5">
                             <svg className="w-3.5 h-3.5 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                            Suites
+                            Suites <CountBubble count={suites.length} />
                         </span>
+                        <button 
+                            onClick={(e) => { e.preventDefault(); nav(`/${section}/suites/new`); }}
+                            className="p-1 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-900 transition-colors"
+                            title="Add Suite"
+                        >
+                            <Plus className="w-3.5 h-3.5" />
+                        </button>
                     </summary>
                     <div className="px-3 pb-2 space-y-1">
-                        {suites.map(s => {
+                        {suites.length > 0 ? suites.map(s => {
                             const sId = s.lineageId;
                             const isActive = suiteId === sId && !protocolId;
                             return (
@@ -134,7 +163,9 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
                                     {s.title}
                                 </Link>
                             );
-                        })}
+                        }) : (
+                            <div className="pl-6 pr-3 py-2 text-sm text-gray-500">No suites found.</div>
+                        )}
                     </div>
                 </details>
 
@@ -143,8 +174,15 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
                     <summary className={detailsSummaryClass}>
                         <span className="flex items-center gap-1.5">
                             <svg className="w-3.5 h-3.5 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                            Protocols
+                            Protocols <CountBubble count={protocols.length} />
                         </span>
+                        <button 
+                            onClick={(e) => { e.preventDefault(); nav(`/${section}/protocols/new`); }}
+                            className="p-1 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-900 transition-colors"
+                            title="Add Protocol"
+                        >
+                            <Plus className="w-3.5 h-3.5" />
+                        </button>
                     </summary>
                     <div className="px-3 pb-2 space-y-1">
                         {protocols.length > 0 ? protocols.map(p => {
@@ -168,30 +206,37 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
                 </details>
 
                 {/* Sub-needs Accordion */}
-                {subNeeds.length > 0 && (
-                    <details className="group" open={!!needId}>
-                        <summary className={detailsSummaryClass}>
-                            <span className="flex items-center gap-1.5">
-                                <svg className="w-3.5 h-3.5 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                                Sub-Needs
-                            </span>
-                        </summary>
-                        <div className="px-3 pb-2 space-y-1">
-                            {subNeeds.map(n => {
-                                const isActive = needId === n.lineageId;
-                                return (
-                                    <Link 
-                                        key={n.lineageId} 
-                                        to={`/${section}/needs/${n.lineageId}`}
-                                        className={`block pl-6 pr-3 py-2.5 rounded-lg text-sm transition-colors ${isActive ? "bg-white text-blue-700 font-medium shadow-sm border border-gray-100" : "text-gray-700 hover:bg-white hover:shadow-sm border border-transparent"}`}
-                                    >
-                                        {n.title}
-                                    </Link>
-                                );
-                            })}
-                        </div>
-                    </details>
-                )}
+                <details className="group" open={!!needId}>
+                    <summary className={detailsSummaryClass}>
+                        <span className="flex items-center gap-1.5">
+                            <svg className="w-3.5 h-3.5 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                            Sub-Needs <CountBubble count={subNeeds.length} />
+                        </span>
+                        <button 
+                            onClick={(e) => { e.preventDefault(); nav(`/${section}/needs/new`); }}
+                            className="p-1 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-900 transition-colors"
+                            title="Add Sub-Need"
+                        >
+                            <Plus className="w-3.5 h-3.5" />
+                        </button>
+                    </summary>
+                    <div className="px-3 pb-2 space-y-1">
+                        {subNeeds.length > 0 ? subNeeds.map(n => {
+                            const isActive = needId === n.lineageId;
+                            return (
+                                <Link 
+                                    key={n.lineageId} 
+                                    to={`/${section}/needs/${n.lineageId}`}
+                                    className={`block pl-6 pr-3 py-2.5 rounded-lg text-sm transition-colors ${isActive ? "bg-white text-blue-700 font-medium shadow-sm border border-gray-100" : "text-gray-700 hover:bg-white hover:shadow-sm border border-transparent"}`}
+                                >
+                                    {n.title}
+                                </Link>
+                            );
+                        }) : (
+                            <div className="pl-6 pr-3 py-2 text-sm text-gray-500">No sub-needs found.</div>
+                        )}
+                    </div>
+                </details>
 
             </div>
         </div>
@@ -200,17 +245,46 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
 
 function SectionIndex({ section }: { section: SectionId }) {
     const repo = useRepo();
+    const nav = useNavigate();
     const [intro, setIntro] = useState("");
+    const [isChecking, setIsChecking] = useState(true);
     
     useEffect(() => {
         let mounted = true;
         (async () => {
             const sections = await repo.listSections();
             const current = sections.find((s) => s.id === section);
-            if (mounted) setIntro(current?.intro ?? "");
+            
+            // Auto-select the first available Suite natively
+            const rootNeeds = await repo.getNeedsBySection(section);
+            let firstSuiteId: string | null = null;
+            let firstSubNeedId: string | null = null;
+
+            for (const n of rootNeeds) {
+                const needSuites = await repo.getSuitesForNeed(n.lineageId);
+                if (needSuites.length > 0 && !firstSuiteId) {
+                    firstSuiteId = needSuites[0].lineageId;
+                }
+                if (!firstSuiteId && n.childLineageIds.length > 0 && !firstSubNeedId) {
+                    firstSubNeedId = n.childLineageIds[0];
+                }
+            }
+
+            if (mounted) {
+                if (firstSuiteId) {
+                    nav(`/${section}/suites/${firstSuiteId}`, { replace: true });
+                } else if (firstSubNeedId) {
+                    nav(`/${section}/needs/${firstSubNeedId}`, { replace: true });
+                } else {
+                    setIntro(current?.intro ?? "");
+                    setIsChecking(false);
+                }
+            }
         })();
         return () => { mounted = false; };
-    }, [repo, section]);
+    }, [repo, section, nav]);
+
+    if (isChecking) return null;
 
     return (
         <div className="max-w-2xl mt-4 animate-fade-in-up">
@@ -220,7 +294,7 @@ function SectionIndex({ section }: { section: SectionId }) {
             <div className="p-6 rounded-2xl border bg-gray-50/50 border-dashed border-gray-200">
                 <p className="text-gray-500 flex items-center gap-2">
                     <svg className="w-5 h-5 text-gray-400 hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                    Select an item from the left sidebar to view its details.
+                    Start by clicking the '+' buttons on the sidebar to create new items.
                 </p>
             </div>
         </div>
