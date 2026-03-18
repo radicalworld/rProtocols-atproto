@@ -74,23 +74,23 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
             
             for (const n of rootNeeds) {
                 // Fetch Suites
-                const needSuites = await repo.getSuitesForNeed(n.rootId);
+                const needSuites = await repo.getSuitesForNeed(n.lineageId);
                 allSuites.push(...needSuites);
                 
                 // Fetch Sub-needs
-                for (const childId of n.childRootIds) {
-                    const child = await repo.getNeedByRootId(childId);
+                for (const childId of n.childLineageIds) {
+                    const child = await repo.getNeedByLineageId(childId);
                     if (child) allSubNeeds.push(child);
                 }
             }
             
             // Deduplicate suites
-            const uniqueSuites = Array.from(new Map(allSuites.map(s => [s.rootId, s])).values());
+            const uniqueSuites = Array.from(new Map(allSuites.map(s => [s.lineageId, s])).values());
             
             // Fetch Protocols
             const allProtocols: Protocol[] = [];
             for (const s of uniqueSuites) {
-                const suiteProtos = await repo.getSuiteProtocols(s.rootId);
+                const suiteProtos = await repo.getSuiteProtocols(s.lineageId);
                 allProtocols.push(...suiteProtos);
             }
             
@@ -123,7 +123,7 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
                     </summary>
                     <div className="px-3 pb-2 space-y-1">
                         {suites.map(s => {
-                            const sId = s.rootId;
+                            const sId = s.lineageId;
                             const isActive = suiteId === sId && !protocolId;
                             return (
                                 <Link 
@@ -178,11 +178,11 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
                         </summary>
                         <div className="px-3 pb-2 space-y-1">
                             {subNeeds.map(n => {
-                                const isActive = needId === n.rootId;
+                                const isActive = needId === n.lineageId;
                                 return (
                                     <Link 
-                                        key={n.rootId} 
-                                        to={`/${section}/needs/${n.rootId}`}
+                                        key={n.lineageId} 
+                                        to={`/${section}/needs/${n.lineageId}`}
                                         className={`block pl-6 pr-3 py-2.5 rounded-lg text-sm transition-colors ${isActive ? "bg-white text-blue-700 font-medium shadow-sm border border-gray-100" : "text-gray-700 hover:bg-white hover:shadow-sm border border-transparent"}`}
                                     >
                                         {n.title}

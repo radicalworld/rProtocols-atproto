@@ -1,0 +1,36 @@
+{
+  "lexicon": 1,
+  "id": "org.rp.mark",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "any",
+      "record": {
+        "type": "object",
+        "required": [
+          "verb",
+          "status",
+          "subject",
+          "createdAt"
+        ],
+        "properties": {
+          "verb": { "type": "string", "enum": ["follow", "adopt"] },
+          "status": { "type": "string", "enum": ["active", "paused", "ended"] },
+          "subject": {
+             "type": "object",
+             "required": ["kind", "lineageId", "pinMode"],
+             "properties": {
+                "kind": { "type": "string", "enum": ["need", "protocol", "suite"] },
+                "lineageId": { "type": "string" },
+                "versionRef": { "type": "ref", "ref": "com.atproto.repo.strongRef" },
+                "pinMode": { "type": "string", "enum": ["exact", "floating-stable"] }
+             }
+          },
+          "context": { "type": "string", "maxLength": 3000 },
+          "createdAt": { "type": "string", "format": "datetime" },
+          "updatedAt": { "type": "string", "format": "datetime" }
+        }
+      }
+    }
+  }
+}

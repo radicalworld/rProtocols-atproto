@@ -1,6 +1,7 @@
 // src/components/ProtocolTile.tsx
 import ProtocolBadge from "@/features/protocols/components/ProtocolBadge";
-import { Release } from "@/features/protocols/lib/releases";
+import { latestVersion, listReleases } from "@/features/protocols/lib/releases";
+import type { ProtocolRelease as Release } from "@/domain/types";
 import { Link } from "react-router-dom";
 
 export function ProtocolTile({

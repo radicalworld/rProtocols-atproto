@@ -7,20 +7,20 @@ export { protocolReleases } from "@/data/releases";
    BASE PROTOCOL CARDS
 ============================================================================ */
 export const protocols: Record<string, Protocol> = {
-    "protocol-creation": { id: "protocol-creation", title: "Protocol Creation", summary: "Structure, attributes, and publishing steps." },
-    "protocol-evolution": { id: "protocol-evolution", title: "Protocol Evolution", summary: "Minor updates vs major forks; history & lineage." },
-    "protocol-attribution": { id: "protocol-attribution", title: "Protocol Attribution", summary: "DIDs, recognition, and shared authorship." },
-    "protocol-adoption": { id: "protocol-adoption", title: "Protocol Adoption", summary: "Signals of active use by a collab or org." },
-    "protocol-follow": { id: "protocol-follow", title: "Protocol Follow", summary: "Track updates and discussions without adopting." },
-    "protocol-trust": { id: "protocol-trust", title: "Protocol Trust", summary: "Peer review, audits, and reliability signals." },
-    "protocol-publishing": { id: "protocol-publishing", title: "Protocol Publishing", summary: "Open formats (JSON), IPFS/ATproto, discoverability." },
-    "protocol-index": { id: "protocol-index", title: "Protocol Index", summary: "Tags, hierarchy, and cross-links across needs/suites." },
-    "protocol-onboarding": { id: "protocol-onboarding", title: "Collaborator Onboarding", summary: "A humane, peer-supported entry path." },
-    "protocol-comms": { id: "protocol-comms", title: "Transparent Comms", summary: "Open updates, decisions, and docs." },
-    "protocol-web-style": { id: "protocol-web-style", title: "Website Style", summary: "Design tokens, typography, accessibility." },
-    "protocol-creation-v2": { id: "protocol-creation-v2", title: "Protocol Creation (v2 Fork)", summary: "Fork exploring simplified attributes & shorter review." },
-    "protocol-adoption-lite": { id: "protocol-adoption-lite", title: "Protocol Adoption (Lite)", summary: "Minimal adoption signals for small collabs." },
-    "protocol-trust-archived": { id: "protocol-trust-archived", title: "Protocol Trust (Archived)", summary: "Deprecated trust signal model retained for history." }
+    "protocol-creation": { id: "protocol-creation", lineageId: "rp_protocol-creation", slug: "protocol-creation", title: "Protocol Creation", summary: "Structure, attributes, and publishing steps." },
+    "protocol-evolution": { id: "protocol-evolution", lineageId: "rp_protocol-evolution", slug: "protocol-evolution", title: "Protocol Evolution", summary: "Minor updates vs major forks; history & lineage." },
+    "protocol-attribution": { id: "protocol-attribution", lineageId: "rp_protocol-attribution", slug: "protocol-attribution", title: "Protocol Attribution", summary: "DIDs, recognition, and shared authorship." },
+    "protocol-adoption": { id: "protocol-adoption", lineageId: "rp_protocol-adoption", slug: "protocol-adoption", title: "Protocol Adoption", summary: "Signals of active use by a collab or org." },
+    "protocol-follow": { id: "protocol-follow", lineageId: "rp_protocol-follow", slug: "protocol-follow", title: "Protocol Follow", summary: "Track updates and discussions without adopting." },
+    "protocol-trust": { id: "protocol-trust", lineageId: "rp_protocol-trust", slug: "protocol-trust", title: "Protocol Trust", summary: "Peer review, audits, and reliability signals." },
+    "protocol-publishing": { id: "protocol-publishing", lineageId: "rp_protocol-publishing", slug: "protocol-publishing", title: "Protocol Publishing", summary: "Open formats (JSON), IPFS/ATproto, discoverability." },
+    "protocol-index": { id: "protocol-index", lineageId: "rp_protocol-index", slug: "protocol-index", title: "Protocol Index", summary: "Tags, hierarchy, and cross-links across needs/suites." },
+    "protocol-onboarding": { id: "protocol-onboarding", lineageId: "rp_protocol-onboarding", slug: "protocol-onboarding", title: "Collaborator Onboarding", summary: "A humane, peer-supported entry path." },
+    "protocol-comms": { id: "protocol-comms", lineageId: "rp_protocol-comms", slug: "protocol-comms", title: "Transparent Comms", summary: "Open updates, decisions, and docs." },
+    "protocol-web-style": { id: "protocol-web-style", lineageId: "rp_protocol-web-style", slug: "protocol-web-style", title: "Website Style", summary: "Design tokens, typography, accessibility." },
+    "protocol-creation-v2": { id: "protocol-creation-v2", lineageId: "rp_protocol-creation-v2", slug: "protocol-creation-v2", title: "Protocol Creation (v2 Fork)", summary: "Fork exploring simplified attributes & shorter review." },
+    "protocol-adoption-lite": { id: "protocol-adoption-lite", lineageId: "rp_protocol-adoption-lite", slug: "protocol-adoption-lite", title: "Protocol Adoption (Lite)", summary: "Minimal adoption signals for small collabs." },
+    "protocol-trust-archived": { id: "protocol-trust-archived", lineageId: "rp_protocol-trust-archived", slug: "protocol-trust-archived", title: "Protocol Trust (Archived)", summary: "Deprecated trust signal model retained for history." }
 };
 
 /* ============================================================================
@@ -28,31 +28,25 @@ export const protocols: Record<string, Protocol> = {
 ============================================================================ */
 export const suites: Record<string, Suite> = {
     "suite-root-protocols": {
-        id: "suite-root-protocols",
+        id: "suite-root-protocols", lineageId: "rp_suite-root-protocols", slug: "suite-root-protocols",
         title: "Collaborative Protocols",
+        language: "en",
         description: "Foundational patterns for creating, evolving, and sharing.",
-        protocolIds: [
-            "protocol-creation",
-            "protocol-evolution",
-            "protocol-attribution",
-            "protocol-adoption",
-            "protocol-follow",
-            "protocol-trust",
-            "protocol-publishing",
-            "protocol-index"
-        ]
+        includeProtocols: [{ lineageId: "protocol-creation" }, { lineageId: "protocol-evolution" }, { lineageId: "protocol-attribution" }, { lineageId: "protocol-adoption" }, { lineageId: "protocol-follow" }, { lineageId: "protocol-trust" }, { lineageId: "protocol-publishing" }, { lineageId: "protocol-index" }]
     },
     "suite-work-foundations": {
-        id: "suite-work-foundations",
+        id: "suite-work-foundations", lineageId: "rp_suite-work-foundations", slug: "suite-work-foundations",
         title: "Work Foundations",
+        language: "en",
         description: "Baseline practices for healthy collaboration.",
-        protocolIds: ["protocol-onboarding", "protocol-comms"]
+        includeProtocols: [{ lineageId: "protocol-onboarding" }, { lineageId: "protocol-comms" }]
     },
     "suite-website-foundations": {
-        id: "suite-website-foundations",
+        id: "suite-website-foundations", lineageId: "rp_suite-website-foundations", slug: "suite-website-foundations",
         title: "Website Foundations",
+        language: "en",
         description: "Shared guidelines for a coherent web presence.",
-        protocolIds: ["protocol-web-style"]
+        includeProtocols: [{ lineageId: "protocol-web-style" }]
     }
 };
 
@@ -60,12 +54,13 @@ export const suites: Record<string, Suite> = {
    NEEDS
 ============================================================================ */
 export const needs: Record<string, Need> = {
-    "root-open-protocols": {
-        id: "root-open-protocols",
-        title: "Creating, evolving, and sharing open protocols together",
-        description: "These are the Root Protocols that ground openness, iteration, and trust.",
-        parentId: null,
-        childIds: [
+    "collaboration": {
+        id: "collaboration", lineageId: "collaboration", slug: "collaboration",
+        title: "Collaboration",
+        language: "en",
+        description: "These are the root protocols that ground openness, iteration, and trust.",
+        parentLineageId: null,
+        childLineageIds: [
             "create-open-protocol",
             "evolve-protocols",
             "attribute-contributions",
@@ -75,89 +70,100 @@ export const needs: Record<string, Need> = {
             "publish-protocols",
             "discover-protocols"
         ],
-        suiteIds: ["suite-root-protocols"],
-        protocolIds: []
+        suiteLineageIds: ["suite-root-protocols"],
+        relatedProtocolLineageIds: []
     },
     "create-open-protocol": {
-        id: "create-open-protocol",
+        id: "create-open-protocol", lineageId: "rp_create-open-protocol", slug: "create-open-protocol",
         title: "Creating an open protocol",
-        parentId: "root-open-protocols",
-        childIds: [],
-        suiteIds: ["suite-root-protocols"],
-        protocolIds: ["protocol-creation"]
+        language: "en",
+        parentLineageId: "collaboration",
+        childLineageIds: [],
+        suiteLineageIds: ["suite-root-protocols"],
+        relatedProtocolLineageIds: ["protocol-creation"]
     },
     "evolve-protocols": {
-        id: "evolve-protocols",
+        id: "evolve-protocols", lineageId: "rp_evolve-protocols", slug: "evolve-protocols",
         title: "Evolving protocols",
-        parentId: "root-open-protocols",
-        childIds: [],
-        suiteIds: ["suite-root-protocols"],
-        protocolIds: ["protocol-evolution"]
+        language: "en",
+        parentLineageId: "collaboration",
+        childLineageIds: [],
+        suiteLineageIds: ["suite-root-protocols"],
+        relatedProtocolLineageIds: ["protocol-evolution"]
     },
     "attribute-contributions": {
-        id: "attribute-contributions",
+        id: "attribute-contributions", lineageId: "rp_attribute-contributions", slug: "attribute-contributions",
         title: "Attributing contributions",
-        parentId: "root-open-protocols",
-        childIds: [],
-        suiteIds: ["suite-root-protocols"],
-        protocolIds: ["protocol-attribution"]
+        language: "en",
+        parentLineageId: "collaboration",
+        childLineageIds: [],
+        suiteLineageIds: ["suite-root-protocols"],
+        relatedProtocolLineageIds: ["protocol-attribution"]
     },
     "adopt-protocol": {
-        id: "adopt-protocol",
+        id: "adopt-protocol", lineageId: "rp_adopt-protocol", slug: "adopt-protocol",
         title: "Adopting protocols",
-        parentId: "root-open-protocols",
-        childIds: [],
-        suiteIds: ["suite-root-protocols"],
-        protocolIds: ["protocol-adoption"]
+        language: "en",
+        parentLineageId: "collaboration",
+        childLineageIds: [],
+        suiteLineageIds: ["suite-root-protocols"],
+        relatedProtocolLineageIds: ["protocol-adoption"]
     },
     "follow-protocol": {
-        id: "follow-protocol",
+        id: "follow-protocol", lineageId: "rp_follow-protocol", slug: "follow-protocol",
         title: "Following protocols",
-        parentId: "root-open-protocols",
-        childIds: [],
-        suiteIds: ["suite-root-protocols"],
-        protocolIds: ["protocol-follow"]
+        language: "en",
+        parentLineageId: "collaboration",
+        childLineageIds: [],
+        suiteLineageIds: ["suite-root-protocols"],
+        relatedProtocolLineageIds: ["protocol-follow"]
     },
     "build-trust": {
-        id: "build-trust",
+        id: "build-trust", lineageId: "rp_build-trust", slug: "build-trust",
         title: "Building trust",
-        parentId: "root-open-protocols",
-        childIds: [],
-        suiteIds: ["suite-root-protocols"],
-        protocolIds: ["protocol-trust"]
+        language: "en",
+        parentLineageId: "collaboration",
+        childLineageIds: [],
+        suiteLineageIds: ["suite-root-protocols"],
+        relatedProtocolLineageIds: ["protocol-trust"]
     },
     "publish-protocols": {
-        id: "publish-protocols",
+        id: "publish-protocols", lineageId: "rp_publish-protocols", slug: "publish-protocols",
         title: "Publishing protocols",
-        parentId: "root-open-protocols",
-        childIds: [],
-        suiteIds: ["suite-root-protocols"],
-        protocolIds: ["protocol-publishing"]
+        language: "en",
+        parentLineageId: "collaboration",
+        childLineageIds: [],
+        suiteLineageIds: ["suite-root-protocols"],
+        relatedProtocolLineageIds: ["protocol-publishing"]
     },
     "discover-protocols": {
-        id: "discover-protocols",
+        id: "discover-protocols", lineageId: "rp_discover-protocols", slug: "discover-protocols",
         title: "Discovering protocols",
-        parentId: "root-open-protocols",
-        childIds: [],
-        suiteIds: ["suite-root-protocols"],
-        protocolIds: ["protocol-index"]
+        language: "en",
+        parentLineageId: "collaboration",
+        childLineageIds: [],
+        suiteLineageIds: ["suite-root-protocols"],
+        relatedProtocolLineageIds: ["protocol-index"]
     },
-    "work-collaboration": {
-        id: "work-collaboration",
-        title: "Collaborating in work",
-        description: "Practices for healthy, life-serving collaboration.",
-        parentId: null,
-        childIds: [],
-        suiteIds: ["suite-work-foundations"],
-        protocolIds: []
+    "work": {
+        id: "work", lineageId: "work", slug: "work",
+        title: "Work",
+        language: "en",
+        description: "Protocols that serve collaboration in work.",
+        parentLineageId: null,
+        childLineageIds: [],
+        suiteLineageIds: ["suite-work-foundations"],
+        relatedProtocolLineageIds: []
     },
-    "web-presence": {
-        id: "web-presence",
-        title: "Keeping a coherent web presence",
-        parentId: null,
-        childIds: [],
-        suiteIds: ["suite-website-foundations"],
-        protocolIds: []
+    "website": {
+        id: "website", lineageId: "website", slug: "website",
+        title: "Website",
+        language: "en",
+        description: "Protocols that serve web presence and operations.",
+        parentLineageId: null,
+        childLineageIds: [],
+        suiteLineageIds: ["suite-website-foundations"],
+        relatedProtocolLineageIds: []
     }
 };
 
@@ -184,7 +190,7 @@ export const marks: Record<string, Mark> = {};
 //   purpose: string;
 //   scope?: { appliesTo?: string[]; region?: Record<string, any> };
 //   tags?: string[];
-//   suiteIds?: string[];
+//   suiteLineageIds?: string[];
 //   relatedProtocols?: string[];
 //   followEnabled?: boolean;
 //   adoptEnabled?: boolean;
@@ -207,7 +213,7 @@ export const websiteReleases: Record<string, { current: string; releases: Record
         current: "0.4",
         releases: {
             "0.4": {
-                id: "protocol-web-style",
+                id: "protocol-web-style", lineageId: "rp_protocol-web-style", slug: "protocol-web-style",
                 version: "0.4",
                 stage: "draft",
                 date: "2025-10-06",
@@ -271,29 +277,29 @@ export function getRelease(id: string, version?: string): ProtocolRelease | unde
 ============================================================================ */
 export const collections = {
     draftsAndRCs: [
-        { id: "protocol-follow", version: "0.6" },
-        { id: "protocol-publishing", version: "0.9" },
-        { id: "protocol-onboarding", version: "0.7" },
-        { id: "protocol-creation-v2", version: "2.0" },
-        { id: "protocol-adoption-lite", version: "0.3" }
+        { id: "protocol-follow", lineageId: "rp_protocol-follow", slug: "protocol-follow", version: "0.6" },
+        { id: "protocol-publishing", lineageId: "rp_protocol-publishing", slug: "protocol-publishing", version: "0.9" },
+        { id: "protocol-onboarding", lineageId: "rp_protocol-onboarding", slug: "protocol-onboarding", version: "0.7" },
+        { id: "protocol-creation-v2", lineageId: "rp_protocol-creation-v2", slug: "protocol-creation-v2", version: "2.0" },
+        { id: "protocol-adoption-lite", lineageId: "rp_protocol-adoption-lite", slug: "protocol-adoption-lite", version: "0.3" }
     ],
     mostAdopted: [
-        { id: "protocol-adoption", version: "1.0" },
-        { id: "protocol-index", version: "1.2" },
-        { id: "protocol-comms", version: "1.2" },
-        { id: "protocol-attribution", version: "1.1" }
+        { id: "protocol-adoption", lineageId: "rp_protocol-adoption", slug: "protocol-adoption", version: "1.0" },
+        { id: "protocol-index", lineageId: "rp_protocol-index", slug: "protocol-index", version: "1.2" },
+        { id: "protocol-comms", lineageId: "rp_protocol-comms", slug: "protocol-comms", version: "1.2" },
+        { id: "protocol-attribution", lineageId: "rp_protocol-attribution", slug: "protocol-attribution", version: "1.1" }
     ],
     recentChanges: [
-        { id: "protocol-creation", version: "1.0", changed: "2025-10-10" },
-        { id: "protocol-publishing", version: "0.9", changed: "2025-10-13" },
-        { id: "protocol-evolution", version: "0.8", changed: "2025-10-12" }
+        { id: "protocol-creation", lineageId: "rp_protocol-creation", slug: "protocol-creation", version: "1.0", changed: "2025-10-10" },
+        { id: "protocol-publishing", lineageId: "rp_protocol-publishing", slug: "protocol-publishing", version: "0.9", changed: "2025-10-13" },
+        { id: "protocol-evolution", lineageId: "rp_protocol-evolution", slug: "protocol-evolution", version: "0.8", changed: "2025-10-12" }
     ]
 };
 
 /* Spotlight (e.g., home hero). Useful for testing version routing/deeplinks) */
 export const spotlightProtocols = [
-    { id: "protocol-creation", version: "1.0" },
-    { id: "protocol-trust", version: "1.0" }
+    { id: "protocol-creation", lineageId: "rp_protocol-creation", slug: "protocol-creation", version: "1.0" },
+    { id: "protocol-trust", lineageId: "rp_protocol-trust", slug: "protocol-trust", version: "1.0" }
 ];
 
 /* Optional: quick draft buffers to simulate “in-flight” edits (editor UX) */

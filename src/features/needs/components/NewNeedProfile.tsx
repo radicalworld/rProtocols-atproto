@@ -2,7 +2,8 @@ import { useState } from "react";
 // TODO: wire this to a backend POST /api/needs (create root + 0.1 draft)
 export default function NewNeedProfile() {
   const [form, setForm] = useState({
-    rootId: "",
+    lineageId: "",
+    slug: "",
     title: "",
     purpose: "",
     description: "",
@@ -20,7 +21,7 @@ export default function NewNeedProfile() {
       // const res = await fetch("/api/needs", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...payload }) });
       // if (!res.ok) throw new Error(await res.text());
       // const data = await res.json();
-      // navigate(`/needs/${data.rootId}`);
+      // navigate(`/needs/${data.lineageId}`);
       setTimeout(() => {}, 0);
       setMsg("✅ Need creation endpoint not yet wired — server route pending.");
     } catch (e: any) {
@@ -39,8 +40,8 @@ export default function NewNeedProfile() {
         <input
           className="mt-1 w-full rounded border p-2"
           placeholder="e.g., how-do-we-share-open-protocols"
-          value={form.rootId}
-          onChange={(e) => setForm({ ...form, rootId: e.target.value })}
+          value={form.lineageId}
+          onChange={(e) => setForm({ ...form, lineageId: e.target.value, slug: e.target.value })}
           disabled={saving}
         />
       </label>

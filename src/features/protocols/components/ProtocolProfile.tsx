@@ -53,7 +53,7 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
             setNotFound(!proto);
         })();
         return () => { alive = false; };
-    }, [parsed, repo]);
+    }, [parsed, repo, isEditing]);
 
     if (notFound) return <Navigate to="/404" replace />;
     if (!p) return <div className="mx-auto max-w-3xl p-6">Loading protocol…</div>;
@@ -70,11 +70,19 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
 
     // normalize stage names
     const uiStage: "draft" | "candidate" | "stable" | "archived" =
-        release?.stage === "rc"
+        release?.stage === "candidate"
             ? "candidate"
-            : release?.stage === "published"
+            : release?.stage === "stable"
             ? "stable"
             : (release?.stage ?? (major === 0 ? "draft" : "stable")) as any;
+
+    const stageDisplayMap: Record<string, string> = {
+        draft: "Still Evolving",
+        candidate: "Ready for Review",
+        stable: "Ready to Use",
+        archived: "Archived"
+    };
+    const uiStageDisplay = stageDisplayMap[uiStage] || uiStage;
 
     const body = p.body || release?.protocolBody || "";
     const canAdopt = release?.adoptEnabled ?? true;
@@ -90,7 +98,8 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
 
     const cid = release?.cid;
     const did = release?.did;
-    const needId = release?.needId;
+    // 1) Link back to Needs
+    const needLineageId = (p as any).needLineageId;
     const scope = release?.scope;
     const related = release?.relatedProtocols ?? [];
     const history = release?.history ?? [];
@@ -128,11 +137,11 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
 
                             <div className="flex items-center justify-between bg-gray-50/50 p-2 rounded-lg border border-gray-100">
                             <div className="flex items-center gap-2">
-                                <ProtocolBadge version={`${major}.${minor}`} stage="published" />
-                                <ProtocolBadge version={uiStage} stage={uiStage === "stable" ? "published" : uiStage as any} />
+                                <ProtocolBadge version={`v${versionString}`} stage="stable" />
+                                <ProtocolBadge version={uiStageDisplay} stage={uiStage === "stable" ? "stable" : uiStage as any} />
                             </div>
                             {versions.length > 0 && (
-                                <ProtocolVersionSwitcher id={p.id} currentVersion={`${major}.${minor}`} onChange={(v) => nav(`/protocols/${p.id}/versions/${v}`)} />
+                                <ProtocolVersionSwitcher id={p.id} currentVersion={versionString} onChange={(v) => nav(`/protocols/${p.id}/versions/${v}`)} />
                             )}
                             </div>
                         </header>
@@ -174,7 +183,7 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="text-sm text-gray-600">
                                 <div className="font-medium text-gray-900">Release</div>
-                                <div>v{major}.{minor}{date ? ` · ${date}` : ""}{language ? ` · ${language}` : ""}</div>
+                                <div>v{versionString}{date ? ` · ${date}` : ""}{language ? ` · ${language}` : ""}</div>
                             </div>
                             <div className="text-sm text-gray-600">
                                 <div className="font-medium text-gray-900">Signals</div>
@@ -184,10 +193,10 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
                                 </div>
                             </div>
                         </div>
-                        {needId && (
+                        {needLineageId && (
                             <div className="text-sm text-gray-600">
                             <div className="font-medium text-gray-900">Need</div>
-                            <div>{needId}</div>
+                            <div>{needLineageId}</div>
                             </div>
                         )}
                         {scope?.region && (

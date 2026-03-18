@@ -1,13 +1,15 @@
-import type { Release } from "@/domain/types";
+import type { ProtocolRelease as Release } from "@/domain/types";
 
-export const workReleases: Record<string, { current: string; releases: Record<string, Release> }> = {
+export const releasesWork: Record<string, { current: string; releases: Record<string, Release> }> = {
   "protocol-onboarding": {
     current: "0.7",
     releases: {
       "0.7": {
         id: "protocol-onboarding",
+        lineageId: "protocol-onboarding",
+        slug: "protocol-onboarding",
         version: "0.7",
-        stage: "rc",
+        stage: "candidate",
         date: "2025-10-05",
         language: "en",
         purpose: "Humane, peer-supported entry path.",
@@ -30,8 +32,10 @@ export const workReleases: Record<string, { current: string; releases: Record<st
     releases: {
       "1.2": {
         id: "protocol-comms",
+        lineageId: "protocol-comms",
+        slug: "protocol-comms",
         version: "1.2",
-        stage: "published",
+        stage: "stable",
         date: "2025-10-03",
         language: "en",
         purpose: "Keep decisions, updates, and docs transparent and accessible.",

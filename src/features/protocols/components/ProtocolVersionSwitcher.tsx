@@ -14,13 +14,20 @@ export function ProtocolVersionSwitcher({
   className?: string;
 }) {
   const items = listReleases(id).map((r) => ({ version: r.version, stage: r.stage }));
+  const stageDisplayMap: Record<string, string> = {
+    draft: "STILL EVOLVING",
+    candidate: "READY FOR REVIEW",
+    stable: "READY TO USE",
+    archived: "ARCHIVED"
+  };
+
   return (
     <VersionSwitcherCore
       items={items}
       current={currentVersion}
       onChange={onChange}
       hideStage="published"
-      stageLabel={(s) => (s === "rc" ? "CANDIDATE" : s?.toUpperCase() ?? "")}
+      stageLabel={(s) => stageDisplayMap[s] || (s === "rc" ? "READY FOR REVIEW" : s?.toUpperCase() ?? "")}
       className={className}
     />
   );

@@ -19,7 +19,7 @@ export function SuiteProfile({ suiteId: propId }: { suiteId?: string } = {}) {
       const s = await repo.getSuite(decodeURIComponent(id));
       if (!alive) return;
       setSuite(s);
-      if (s) setProtocols(await repo.getSuiteProtocols(s.rootId));
+      if (s) setProtocols(await repo.getSuiteProtocols(s.lineageId));
     })();
     return () => { alive = false; };
   }, [id, repo]);
@@ -36,7 +36,7 @@ export function SuiteProfile({ suiteId: propId }: { suiteId?: string } = {}) {
               {suite.description && <p className="mt-2 text-lg text-gray-600 leading-relaxed">{suite.description}</p>}
             </div>
             <div className="flex gap-2 shrink-0 mt-1">
-              <FollowEye subjectId={suite.rootId} label="Follow suite" />
+              <FollowEye subjectId={suite.lineageId} label="Follow suite" />
             </div>
           </header>
           

@@ -1,0 +1,72 @@
+{
+  "lexicon": 1,
+  "id": "org.rp.suite",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "any",
+      "record": {
+        "type": "object",
+        "required": [
+          "lineage",
+          "slug",
+          "version",
+          "stage",
+          "createdAt",
+          "authorship",
+          "title"
+        ],
+        "properties": {
+          "lineage": {
+            "type": "object",
+            "required": ["id", "root"],
+            "properties": {
+              "id": { "type": "string" },
+              "root": { "type": "ref", "ref": "com.atproto.repo.strongRef" },
+              "prev": { "type": "ref", "ref": "com.atproto.repo.strongRef" },
+              "forkedFrom": { "type": "ref", "ref": "com.atproto.repo.strongRef" }
+            }
+          },
+          "slug": { "type": "string", "maxLength": 100 },
+          "version": { "type": "string" },
+          "stage": { "type": "string" },
+          "createdAt": { "type": "string", "format": "datetime" },
+          "language": { "type": "string" },
+          "authorship": {
+            "type": "object",
+            "required": ["authorDid"],
+            "properties": {
+              "authorDid": { "type": "string" }
+            }
+          },
+          "title": { "type": "string", "maxLength": 300 },
+          "description": { "type": "string", "maxLength": 3000 },
+          "purpose": { "type": "string", "maxLength": 3000 },
+          "members": {
+            "type": "object",
+            "properties": {
+              "needs": { "type": "array", "items": { "type": "ref", "ref": "com.atproto.repo.strongRef" } },
+              "protocols": { "type": "array", "items": { "type": "ref", "ref": "com.atproto.repo.strongRef" } },
+              "suites": { "type": "array", "items": { "type": "ref", "ref": "com.atproto.repo.strongRef" } }
+            }
+          },
+          "tags": { "type": "array", "items": { "type": "string", "maxLength": 64 }, "maxLength": 10 },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "shortUrl": { "type": "string" },
+              "qrCode": { "type": "string" }
+            }
+          },
+          "lifecycle": {
+            "type": "object",
+            "properties": {
+              "deprecatedAt": { "type": "string", "format": "datetime" },
+              "archived": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

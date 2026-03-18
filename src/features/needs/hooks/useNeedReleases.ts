@@ -18,7 +18,7 @@ export function useNeedReleases(rootId: string | undefined) {
     setError(null);
     try {
       // For mock, we only have one release which is the root Need itself
-      const needData = await repo.getNeedByRootId?.(rootId);
+      const needData = await repo.getNeedByLineageId?.(rootId);
       if (needData) {
         const rel: NeedRelease = {
            rootId: rootId,

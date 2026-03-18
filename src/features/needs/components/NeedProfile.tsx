@@ -35,7 +35,7 @@ export function NeedProfile() {
       if (parsed.ver) {
         need = await repo.getNeedByVersion?.(parsed.slug, parsed.ver) ?? null;
       } else {
-        need = await repo.getNeedByRootId?.(parsed.slug) ?? null;
+        need = await repo.getNeedByLineageId?.(parsed.slug) ?? null;
       }
       if (!alive) return;
       setN(need);
@@ -48,11 +48,19 @@ export function NeedProfile() {
   if (!n) return <div className="mx-auto max-w-3xl p-6">Loading need…</div>;
 
   // version info
-  const selectedVersion = parsed.ver ?? latestNeedVersion(n.rootId) ?? "1.0";
-  const release = getNeedRelease(n.rootId, selectedVersion);
+  const selectedVersion = parsed.ver ?? latestNeedVersion(n.lineageId) ?? "1.0";
+  const release = getNeedRelease(n.lineageId, selectedVersion);
   const versionString = release?.version ?? selectedVersion;
   const { major, minor } = parseVersion(versionString);
   const uiStage = release?.stage ?? (major === 0 ? "draft" : "stable");
+
+  const stageDisplayMap: Record<string, string> = {
+    draft: "Still Evolving",
+    candidate: "Ready for Review",
+    stable: "Ready to Use",
+    archived: "Archived"
+  };
+  const uiStageDisplay = stageDisplayMap[uiStage] || uiStage;
 
   // data normalization
   const description = release?.description ?? n.description ?? "";
@@ -65,7 +73,7 @@ export function NeedProfile() {
   const attribution = release?.attribution ?? [];
   const history = release?.history ?? [];
   const date = release?.date ?? "";
-  const versions = listNeedReleases(n.rootId);
+  const versions = listNeedReleases(n.lineageId);
 
   return (
     <article className="mx-auto max-w-3xl space-y-6 p-6">
@@ -73,18 +81,19 @@ export function NeedProfile() {
         <div className="flex items-start justify-between">
           <h1 className="text-2xl font-semibold">{n.title}</h1>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => nav(`/needs/${encodeURIComponent(n.rootId)}/edit`)}>
+            <Button variant="outline" size="sm" onClick={() => nav(`/needs/${encodeURIComponent(n.lineageId)}/edit`)}>
               <Edit className="w-4 h-4 mr-2" />
               Edit Option
             </Button>
-            <FollowEye subjectId={n.rootId} label="Follow need" />
+            <FollowEye subjectId={n.lineageId} label="Follow need" />
           </div>
         </div>
 
         {/* badges + version switcher */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <NeedBadge version={`${major}.${minor}`} stage={uiStage} />
+            <NeedBadge version={`v${versionString}`} stage="stable" />
+            <NeedBadge version={uiStageDisplay} stage={uiStage === "stable" ? "stable" : uiStage as any} />
           </div>
           {versions.length > 0 && (
             <NeedVersionSwitcher
@@ -104,7 +113,7 @@ export function NeedProfile() {
           <div>
             <div className="font-medium text-gray-900">Release</div>
             <div>
-              v{major}.{minor}
+              v{versionString}
               {date ? ` · ${date}` : ""}
               {language ? ` · ${language}` : ""}
             </div>

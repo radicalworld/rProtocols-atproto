@@ -11,12 +11,9 @@ export default function NeedBadge({ version, stage }: { version: string; stage: 
 
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${palette[stage]}`}
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${palette[stage]}`}
     >
       <span>{version}</span>
-      {stage !== "stable" && (
-        <span className="uppercase tracking-wide">{stage}</span>
-      )}
     </span>
   );
 }

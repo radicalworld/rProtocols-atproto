@@ -1,6 +1,5 @@
 // server/signup.ts (Express)
 import express from "express";
-import fetch from "node-fetch";
 import cookieParser from "cookie-parser";
 
 const app = express();

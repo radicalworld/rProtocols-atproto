@@ -3,11 +3,13 @@
  * If missing or malformed, returns { major:0, minor:0 }. */
 
 export function parseVersion(ver: string | undefined) {
-    if (!ver) return { major: 0, minor: 0 };
-    const [majStr, minStr] = ver.split(".");
-    const major = parseInt(majStr, 10) || 0;
+    if (!ver) return { major: 0, minor: 0, patch: 0 };
+    const [majStr, minStr, patchStr] = ver.split(".");
+    let major = parseInt(majStr, 10);
+    if (isNaN(major)) major = 0;
     const minor = parseInt(minStr, 10) || 0;
-    return { major, minor };
+    const patch = parseInt(patchStr, 10) || 0;
+    return { major, minor, patch };
 }
 
 /**
@@ -25,5 +27,6 @@ export function compareVersions(a: string, b: string) {
     const va = parseVersion(a);
     const vb = parseVersion(b);
     if (va.major !== vb.major) return va.major - vb.major;
-    return va.minor - vb.minor;
+    if (va.minor !== vb.minor) return va.minor - vb.minor;
+    return va.patch - vb.patch;
 }

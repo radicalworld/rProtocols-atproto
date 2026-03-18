@@ -4,391 +4,305 @@
 export type SectionId = "collaboration" | "work" | "website";
 
 // ==============================
+// Primitives for V1
+// ==============================
+export type StrongRef = {
+    uri: string;
+    cid: string;
+};
+
+export type Lineage = {
+    id: string; // opaque mapping (rp_nd_..., rp_pt_...)
+    root: StrongRef;
+    prev?: StrongRef;
+    forkedFrom?: StrongRef;
+};
+
+// ==============================
 // Entity IDs
 // ==============================
-export type NeedId = string;              // usually the Need rootId (public)
-export type SuiteId = string;             // suite root/public id
-export type ProtocolId = string;          // protocol release/public id (legacy)
-export type ProtocolRootId = string;      // stable protocol root id
-export type ProtocolVersionId = string;   // optional record id if needed later
+export type NeedId = string;             
+export type SuiteId = string;             
+export type ProtocolId = string;          
+export type ProtocolRootId = string;      
 
 // ==============================
 // Versions & Stages (GLOBAL)
 // ==============================
-export type VersionString = `${number}.${number}`; // major.minor
+export type VersionString = string; // e.g. "1.0.0"
 export type Stage = "draft" | "candidate" | "stable" | "deprecated";
 
-// Global version ranges (inclusive lower, exclusive upper)
 export type VersionRange = {
-  minInclusive?: VersionString;  // e.g., "1.0"
-  maxExclusive?: VersionString;  // e.g., "2.0"
+  minInclusive?: VersionString;
+  maxExclusive?: VersionString;
 };
 
 // ==============================
-// Canonical Need (Life Need) (CID'ed content)
+// V1 ATProto Record Types (Raw JSON Shapes)
 // ==============================
-export interface Need {
-    /** human-readable stable id across versions (URL-friendly) */
-    rootId: string;                     // e.g., "root-open-protocols"
+export interface NeedRecord {
+    $type: "org.rp.need";
+    lineage: Lineage;
+    slug: string;
+    version: VersionString;
+    stage: Stage;
+    createdAt: string;
+    language: string;
+    authorship: { authorDid: string };
 
-    /** question form */
-    title: string;
-
-    /** optional framing */
+    context?: string;
+    title?: string;
+    question?: string;
     description?: string;
     purpose?: string;
 
-    /** language & attributes */
-    language: string;                   // "en"
-    tags?: string[];                    // UI: comma-separated, store as array
+    relations?: {
+        parent?: StrongRef;
+        children?: StrongRef[];
+        suites?: StrongRef[];
+        relatedProtocols?: StrongRef[];
+    };
 
-    /** Relations */
-    parentRootId: string | null;
-    childRootIds: string[];             // children by rootId
-    suiteIds: string[];                 // suites that include this need (by suite publicId)
-    relatedProtocolIds?: string[];      // protocols directly related to this need
-
-    /** Connectivity */
-    shortUrl?: string;
-    qrCode?: string;
-
-    /** Social (Needs are follow-only) */
-    followEnabled?: boolean;                // default true
-    followCount?: number;                   // engagement indicator
+    tags?: string[];
+    metadata?: { shortUrl?: string; qrCode?: string };
+    lifecycle?: { deprecatedAt?: string; archived?: boolean };
 }
 
-export interface NeedRoot {                 // Anchor for the need - holds the lineage of all versions and social signals
-    // Stable identity
-    rootId: string;                         // Public, URL-friendly, immutable
-    did: string;                            // resource DID, crypto DID for verification
+export interface ProtocolRecord {
+    $type: "org.rp.protocol";
+    lineage: Lineage;
+    slug: string;
+    version: VersionString;
+    stage: Stage;
+    createdAt: string;
+    language: string;
+    authorship: { authorDid: string };
 
-    // Canonical pointers
-    latestVersion: VersionString;           // newest across all stages
-    latestCid: string;                      // CID for latestVersion
-    publishedVersion?: VersionString;       // version shown at /needs/:rootId
-    publishedCid?: string;                  // CID for publishedVersion
+    needRef: StrongRef;
+    title: string;
+    summary?: string;
+    protocolBody?: string;
+    purpose?: string;
 
-    // Fast local index of all versions
-    versions: Record<
-        VersionString,
-        {
-            cid: string;
-            stage: Stage;                   // required for clarity
-            date: string;                   // YYYY-MM-DD (for lists/sorts)
-        }
-    >;
+    scope?: {
+        appliesTo?: string[];
+        region?: { level: string };
+    };
 
-    // Optional convenience for UI speed (materialized at write time)
-    latestDraftVersion?: VersionString;
-    hasUnpublishedChanges?: boolean;        // latestVersion !== publishedVersion
-    // stageCounts?: { draft: number; candidate: number; stable: number; deprecated: number };
+    relations?: {
+        suites?: StrongRef[];
+        relatedProtocols?: StrongRef[];
+    };
 
-    // Social (Needs are follow-only)
-    followEnabled: boolean;
-    followCount: number;
+    tags?: string[];
+    metadata?: { shortUrl?: string; qrCode?: string };
+    lifecycle?: { deprecatedAt?: string; archived?: boolean };
+}
 
-    // Lifecycle / deprecation
-    isDeprecated?: boolean;
-    successorRootId?: string;               // if deprecated, redirect target
-    deprecatedAt?: string;
+export interface SuiteRecord {
+    $type: "org.rp.suite";
+    lineage: Lineage;
+    slug: string;
+    version: VersionString;
+    stage: Stage;
+    createdAt: string;
+    language: string;
+    authorship: { authorDid: string };
 
-    // Ops
+    title: string;
+    description?: string;
+    purpose?: string;
+
+    members?: {
+        needs?: StrongRef[];
+        protocols?: StrongRef[];
+        suites?: StrongRef[];
+    };
+
+    tags?: string[];
+    metadata?: { shortUrl?: string; qrCode?: string };
+    lifecycle?: { deprecatedAt?: string; archived?: boolean };
+}
+
+export interface MarkRecord {
+    $type: "org.rp.mark";
+    verb: "follow" | "adopt";
+    status: "active" | "paused" | "ended";
+    
+    subject: {
+        kind: "need" | "protocol" | "suite";
+        lineageId: string;
+        versionRef?: StrongRef;
+        pinMode: "exact" | "floating-stable";
+    };
+
+    context?: string;
+    createdAt: string;
     updatedAt?: string;
 }
 
-export type NeedVersion = {
-    rootId: string;                         // public, stable (URL-friendly)
-    parentId: string;                       // Need.rootId
-    version: VersionString;                 // "0.1", "1.0", "1.1"
-    stage?: Stage;                          // unified
-    date: string;                           // ISO YYYY-MM-DD for display.
-    
-    hash: string;                           // canonical content hash (CID/sha256) of the normalized attributes.
-    cid: string;                            // content address of canonical Need JSON
-  
-    content: Need;                          // canonical JSON
-    prevCid?: string;                       // lineage pointer
-    createdAt?: string;                     // ISO datetime
-    authorDid?: string;
-    signature?: string;                     // signature over (cid, parentId, version)
-  
-    notes?: string;                         // short release notes/rationale
-    breaking?: boolean;                     // major change to scope/intent
-};
+// ==============================
+// UI Domain Models (Aggregated / Processed)
+// ==============================
+
+// Canonical Need (Life Need) (CID'ed content)
+export interface Need {
+    id: string; // SQLite URI or mock ID
+    lineageId: string; // The opaque rp_nd_id
+    slug: string;      // The human readable string
+
+    title: string;     // Mapped from context
+    description?: string;
+    purpose?: string;
+
+    language: string;
+    tags?: string[];
+
+    // Relations mapped by AppView to strings for easy React rendering
+    parentLineageId: string | null;
+    childLineageIds: string[];
+    suiteLineageIds: string[];
+    relatedProtocolLineageIds?: string[];
+
+    shortUrl?: string;
+    qrCode?: string;
+
+    followEnabled?: boolean;
+    followCount?: number;
+}
 
 export interface NeedRelease {
-    id: string;                             // db id for this release record
-  version: VersionString;             // "1.0", "1.1"
-  stage: Stage;                       // unified
-  date: string;                       // ISO (YYYY-MM-DD)
-  language: string;
+    id: string;                  // uri
+    version: VersionString;      
+    stage: Stage;                
+    date: string;                
+    language: string;
 
-  // --- Identity & Lineage ---
-  did?: string;
-  cid?: string;                       // NeedVersion.cid
-  prevCid?: string;                   // lineage pointer
-  needRootId: string;                 // == Need.rootId
+    did?: string;
+    cid?: string;
+    prevCid?: string;
+    
+    lineageId: string;           
+    slug: string;
 
-  // --- Purpose ---
-  purpose: string;
+    purpose: string;
+    question: string;            
+    description?: string;
 
-  // --- Relations ---
-  tags?: string[];
-  suiteIds?: string[];
-  relatedProtocols?: string[];        // UI alias to relatedProtocolIds
+    tags?: string[];
+    suiteLineageIds?: string[];
+    relatedProtocols?: string[]; 
 
-  // --- Social (Follow only) ---
-  followEnabled?: boolean;
-  followCount?: number;
+    followEnabled?: boolean;
+    followCount?: number;
 
-  // --- Connectivity ---
-  shortUrl?: string;
-  qrCode?: string;
+    shortUrl?: string;
+    qrCode?: string;
 
-  // --- Trust & Attribution ---
-  attribution?: { name: string; did: string }[];
-  history?: { version: VersionString; date: string; note: string }[];
-  changeDescription?: string;
+    attribution?: { name: string; did: string }[];
+    history?: { version: VersionString; date: string; note: string }[];
+    changeDescription?: string;
 
-  // --- Content snapshot ---
-  question: string;                   // mirrors Need.title
-  description?: string;
-  parentRootId: string | null;
-  childRootIds: string[];
+    parentLineageId: string | null;
+    childLineageIds: string[];
 
-  // Optional end-of-life nuance
-    endOfLifeAt?: string;                               // ISO datetime
-    archived?: boolean;                                 // subset of deprecated if you need it
+    endOfLifeAt?: string;
+    archived?: boolean;
 }
-
-// ==============================
-// Suites (canonical, CIDed content)
-// ==============================
-export type NeedRef =
-  | { rootId: NeedId; version?: VersionString }           // exact pin
-  | { rootId: NeedId; range: VersionRange };              // compatible set
-
-export type ProtocolRef =
-  | { rootId: ProtocolRootId; version?: VersionString }
-  | { rootId: ProtocolRootId; range: VersionRange };
-
-export type SuiteRef =
-  | { rootId: SuiteId; version?: VersionString }
-  | { rootId: SuiteId; range: VersionRange };
 
 export interface Suite {
-  /** human-readable stable id across versions (URL-friendly) */
-  rootId: SuiteId;                       // e.g., "suite-root-protocols"
-
-  /** identity */
+  id: string;
+  lineageId: SuiteId;
+  slug: string;
+  
   title: string;
   description?: string;
-  language: string;                      // "en"
-
-  /** attributes */
-  tags?: string[];
-  purpose?: string;
-
-  /** selection rules (resolved at release time) */
-  includeNeeds?: NeedRef[];
-  includeProtocols?: ProtocolRef[];
-  includeSuites?: SuiteRef[];            // allow nesting if desired
-
-  /** optional scope parity */
-  scope?: {
-    appliesTo?: string[];
-    region?: { level: "global" | "country" | "state" | "city"; code?: string; name?: string };
-  };
-
-  /** connectivity & social */
-  shortUrl?: string;
-  qrCode?: string;
-  followEnabled?: boolean;               // default true
-  followCount?: number;
-}
-
-export type SuiteVersion = {
-  parentId: SuiteId;                     // Suite.rootId
-  version: VersionString;                // "0.1", "1.0"
-  cid: string;                           // content address of canonical Suite JSON
-  content: Suite;                        // canonical JSON
-  prevCid?: string;                      // lineage pointer
-  createdAt?: string;                    // ISO datetime
-  authorDid?: string;
-  signature?: string;                    // signature over (cid, parentId, version)
-  stage?: Stage;                         // unified
-  notes?: string;                        // short release notes / rationale
-  breaking?: boolean;                    // major change to scope/intent
-};
-
-export interface SuiteRelease {
-  /** release identity */
-  id: string;                            // db id
-  suiteRootId: SuiteId;                  // == Suite.rootId
-  version: VersionString;                // "1.0"
-  stage: Stage;                          // unified
-  date: string;                          // ISO (YYYY-MM-DD)
   language: string;
 
-  // lineage
-  did?: string;
-  cid?: string;                          // SuiteVersion.cid
-  prevCid?: string;
-
-  // content snapshot (resolved from include* rules at publish time)
-  title: string;
-  description?: string;
-  purpose?: string;
   tags?: string[];
-  scope?: Suite["scope"];
+  purpose?: string;
 
-  // authoritative, immutable snapshot members
-  needMembers: Array<{ rootId: NeedId; version: VersionString }>;
-  protocolMembers: Array<{ rootId: ProtocolRootId; version: VersionString }>;
-  suiteMembers?: Array<{ rootId: SuiteId; version: VersionString }>;
-
-  // connectivity & social
+  includeNeeds?: Array<{ lineageId: string }>;
+  includeProtocols?: Array<{ lineageId: string }>;
+  
   shortUrl?: string;
   qrCode?: string;
-  followEnabled?: boolean;
+  followEnabled?: boolean;               
   followCount?: number;
-
-  // trust & attribution
-  attribution?: { name: string; did: string }[];
-  history?: { version: VersionString; date: string; note: string }[];
-  changeDescription?: string;
-
-  // optional end-of-life nuance
-  endOfLifeAt?: string;                  // ISO datetime
-  archived?: boolean;                    // subset of deprecated, if needed
 }
 
-export interface SuiteHead {
-  rootId: SuiteId;                       // public, stable
-  did: string;                           // crypto DID
-  currentVersion: VersionString;         // latest stable (e.g., "1.2")
-  latestDraftVersion?: VersionString;    // if draft exists (e.g., "0.4")
-  status: Stage;                         // typically "stable" | "deprecated"
-  versions: Record<VersionString, { cid: string; stage?: Stage }>;
-  successorId?: SuiteId;                 // if deprecated, where to redirect
-}
-
-// ==============================
-// Protocols (aligned, two-part versions)
-// ==============================
-export type Protocol = {
-  id: ProtocolId;
+export interface Protocol {
+  id: string; // the uri
+  lineageId: ProtocolRootId;
+  slug: string;
+  
   title: string;
   summary?: string;
-  body?: string;                      // optional in mock; full page later
-};
+  body?: string;                      
+}
 
-export type ProtocolRoot = {
-  id: ProtocolRootId;                 // stable id (not the slug)
-  slug: string;                       // public, SEO-friendly
-  aliases?: string[];                 // older slugs
-  latestCid?: string;
-  latestVersion?: VersionString;      // align to major.minor
-  createdAt?: string;
-  updatedAt?: string;
-};
-
-export type ProtocolVersion = {
-  parentId: ProtocolRootId;           // points to the root
-  version: VersionString;             // "0.1", "1.2"
-  cid: string;                        // content-addressed id of canonical JSON
-  content: Protocol;                  // canonical payload
-  prevCid?: string;                   // lineage
-  createdAt?: string;
-  authorDid?: string;
-  signature?: string;
-  stage?: Stage;                      // unified
-  notes?: string;                     // short release notes / rationale
-  breaking?: boolean;                 // highlight breaking change
-};
-
-// Rich Protocol release record
 export interface ProtocolRelease {
   id: string;
   version: VersionString;
-  stage: Stage;                       // unified
-  date: string;                       // ISO (YYYY-MM-DD)
+  stage: Stage;                       
+  date: string;                       
   language: string;
 
-  // --- Identity & Lineage ---
   did?: string;
   cid?: string;
   prevCid?: string;
-  needRootId?: string;                // standardized name
+  closing?: string;
+  
+  lineageId: string;
+  slug: string;
+  needLineageId?: string;                
 
-  // --- Purpose & Scope ---
   purpose: string;
-  scope?: {
-    appliesTo?: string[];
-    region?: { level: "global" | "country" | "state" | "city"; code?: string; name?: string };
-  };
+  scope?: any;
 
-  // --- Relations ---
   tags?: string[];
-  suiteIds?: string[];
+  suiteLineageIds?: string[];
   relatedProtocols?: string[];
 
-  // --- Social Signals ---
   followEnabled?: boolean;
   adoptEnabled?: boolean;
   followCount?: number;
   adoptCount?: number;
 
-  // --- Connectivity ---
   shortUrl?: string;
   qrCode?: string;
 
-  // --- Trust & Attribution ---
   attribution?: { name: string; did: string }[];
   history?: { version: VersionString; date: string; note: string }[];
   changeDescription?: string;
 
-  // --- Content ---
-  protocolBody: string;               // Markdown (≤ 1024 chars recommended)
-  title?: string;                     // Snapshot override
-  summary?: string;                   // Snapshot override
+  protocolBody: string;               
+  title?: string;                     
+  summary?: string;                   
 
-  // Optional end-of-life nuance
   endOfLifeAt?: string;
   archived?: boolean;
 }
 
-export interface ProtocolHead {
-  rootId: ProtocolRootId;
-  did: string;
-  currentVersion: VersionString;
-  latestDraftVersion?: VersionString;
-  status: Stage;
-  versions: Record<VersionString, { cid: string; stage?: Stage }>;
-  successorId?: ProtocolRootId;
-}
-    
 // ==============================
-// Marks (follow/adopt) with actor
+// Marks with actor
 // ==============================
 export type MarkVerb = "follow" | "adopt";
 export type MarkStatus = "active" | "paused" | "ended";
 export type SubjectKind = "need" | "suite" | "protocol";
 
-
 export type Mark = {
   id: string;
   verb: MarkVerb;
   subjectKind: SubjectKind;
-  subjectRootId: NeedId | SuiteId | ProtocolRootId; // stable id
-  subjectVersion?: VersionString;    // optional, if marking a particular release
+  subjectLineageId: string; 
+  subjectVersion?: VersionString;    
   status: MarkStatus;
-  actorDid: string;                  // who followed/adopted
+  actorDid: string;                  
   context?: string;
-  createdAt: string;                 // ISO
-  updatedAt?: string;                // ISO
+  createdAt: string;                 
+  updatedAt?: string;                
 };
-
 
 // ==============================
 // Tree rendering (release-level)
@@ -400,17 +314,19 @@ export type NeedNode = NeedRelease & {
 // ==============================
 // Global version helpers
 // ==============================
-export function parseVersion(v: VersionString): [number, number] {
-  const [maj, min] = v.split(".").map((n) => parseInt(n, 10));
-  if (Number.isNaN(maj) || Number.isNaN(min)) throw new Error(`Bad version: ${v}`);
-  return [maj, min];
+export function parseVersion(v: VersionString): [number, number, number] {
+  const parts = v.split(".").map((n) => parseInt(n, 10));
+  if (parts.length < 2) throw new Error(`Bad version: ${v}`);
+  return [parts[0] || 0, parts[1] || 0, parts[2] || 0];
 }
 
 export function cmpVersion(a: VersionString, b: VersionString): -1 | 0 | 1 {
-  const [am, an] = parseVersion(a);
-  const [bm, bn] = parseVersion(b);
+  const [am, an, ap] = parseVersion(a);
+  const [bm, bn, bp] = parseVersion(b);
   if (am !== bm) return am < bm ? -1 : 1;
   if (an !== bn) return an < bn ? -1 : an > bn ? 1 : 0;
+  if (ap !== bp) return ap < bp ? -1 : ap > bp ? 1 : 0;
+  return 0;
 }
 
 export function inRange(v: VersionString, r?: VersionRange): boolean {
@@ -423,21 +339,17 @@ export function inRange(v: VersionString, r?: VersionRange): boolean {
 // Bumping helpers (global policy)
 export function nextMinor(v: VersionString): VersionString {
   const [maj, min] = parseVersion(v);
-  return `${maj}.${min + 1}` as VersionString;
+  return `${maj}.${min + 1}.0` as VersionString;
 }
 export function nextMajor(v: VersionString): VersionString {
   const [maj] = parseVersion(v);
-  return `${maj + 1}.0` as VersionString;
+  return `${maj + 1}.0.0` as VersionString;
 }
 
-// Pre-stable workflow helpers
-export function firstDraft(): VersionString { return "0.1"; }
-// Stage flips handle draft ↔ candidate; number stays on 0.x during pre-stable
-export function promoteCandidateToStable(): VersionString { return "1.0"; }
+export function firstDraft(): VersionString { return "0.1.0"; }
+export function promoteCandidateToStable(): VersionString { return "1.0.0"; }
 
-// Post-stable workflow helpers
 export function bumpStableMinor(current: VersionString): VersionString {
-  // requires current >= 1.0
   return nextMinor(current);
 }
 export function bumpStableMajor(current: VersionString): VersionString {

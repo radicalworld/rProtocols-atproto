@@ -14,8 +14,9 @@ export function ProtocolExpanded({ protocolId }: { protocolId: string }) {
         (async () => {
             // TODO: add repo.getProtocol(id). For now, try to find it via suites you're already using.
             const candidates = await repo.getSuiteProtocols("suite-root-protocols");
+            const testProto = p || { id: "test", lineageId: "test", slug: "test", title: "Test Protocol", summary: "A placeholder protocol description.", body: "## Usage\nTest usage content." };
             const found = candidates.find((x) => x.id === protocolId);
-            if (m) setP(found ?? { id: protocolId, title: protocolId });
+            if (m) setP(found ?? { id: protocolId, title: protocolId, lineageId: protocolId, slug: protocolId });
         })();
         return () => { m = false; };
     }, [repo, protocolId]);

@@ -76,25 +76,45 @@ export function useProtocolEditor(rootId?: string, version?: string) {
     }
   }, [rootId, version, repo]);
 
-  const updateDraft = useCallback(
-    async (ver: string, changes: Record<string, unknown>) => {
-      if (!rootId) return;
-      await repo.updateProtocolDraft(rootId, ver, changes);
-      await refresh();
-    },
-    [rootId, repo, refresh]
-  );
+  const publishProtocol = useCallback(
+    async (
+      versionType: "patch" | "minor", 
+      targetStage: "draft" | "candidate" | "stable", 
+      currentContent: Record<string, unknown>
+    ) => {
+      if (!rootId || !draft) return;
+      
+      let targetVer = draft.version;
+      const parts = targetVer.split('.');
+      let major = parseInt(parts[0], 10);
+      if (isNaN(major)) major = 1;
+      let minor = parseInt(parts[1], 10) || 0;
+      let patch = parseInt(parts[2], 10) || 0;
 
-  const promote = useCallback(
-    async (ver: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string) => {
-      if (!rootId) return;
-      await repo.promoteProtocolVersion(rootId, ver, toStage, changeDescription);
+      if (versionType === 'minor') {
+        minor += 1;
+        patch = 0;
+        targetVer = `${major}.${minor}`;
+      } else {
+        patch += 1;
+        targetVer = `${major}.${minor}.${patch}`;
+      }
+
+      // 1. Write Data (inserts as Draft by default in PDS)
+      await repo.updateProtocolDraft(rootId, targetVer, currentContent);
+
+      // 2. Promote if requested
+      if (targetStage !== "draft") {
+         await repo.promoteProtocolVersion(rootId, targetVer, targetStage, `Published via editor`);
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 800));
       await refresh();
     },
-    [rootId, repo, refresh]
+    [rootId, draft, repo, refresh]
   );
 
   useEffect(() => { void refresh(); }, [refresh]);
 
-  return { rootId: rootId ?? "", version, draft, latest, loading, error, refresh, updateDraft, promote };
+  return { rootId: rootId ?? "", version, draft, latest, loading, error, refresh, publishProtocol };
 }

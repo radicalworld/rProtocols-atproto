@@ -8,58 +8,63 @@
       "record": {
         "type": "object",
         "required": [
-          "rootId",
+          "lineage",
+          "slug",
           "version",
           "stage",
-          "createdAt"
+          "createdAt",
+          "authorship"
         ],
         "properties": {
-          "rootId": { "type": "string" },
-          "version": { "type": "string" },
-          "stage": { "type": "string" },
-          "date": { "type": "string" },
-          "language": { "type": "string" },
-          "provenance": {
+          "lineage": {
             "type": "object",
+            "required": ["id", "root"],
             "properties": {
-              "authorDid": { "type": "string" },
-              "signature": { "type": "string" }
+              "id": { "type": "string" },
+              "root": { "type": "ref", "ref": "com.atproto.repo.strongRef" },
+              "prev": { "type": "ref", "ref": "com.atproto.repo.strongRef" },
+              "forkedFrom": { "type": "ref", "ref": "com.atproto.repo.strongRef" }
             }
           },
-          "question": { "type": "string", "maxLength": 300 },
+          "slug": { "type": "string", "maxLength": 100 },
+          "version": { "type": "string" },
+          "stage": { "type": "string" },
+          "createdAt": { "type": "string", "format": "datetime" },
+          "language": { "type": "string" },
+          "authorship": {
+            "type": "object",
+            "required": ["authorDid"],
+            "properties": {
+              "authorDid": { "type": "string" }
+            }
+          },
+          "context": { "type": "string", "maxLength": 300 },
           "description": { "type": "string", "maxLength": 3000 },
           "purpose": { "type": "string", "maxLength": 3000 },
-          "subject": {
-             "type": "object",
-             "properties": {
-                "subjectKind": { "type": "string" },
-                "subjectRootId": { "type": "string" },
-                "actorDid": { "type": "string" }
-             }
-          },
           "relations": {
-             "type": "object",
-             "properties": {
-               "parentRootId": { "type": "string" },
-               "childRootIds": { "type": "array", "items": { "type": "string" } },
-               "suiteIds": { "type": "array", "items": { "type": "string" } },
-               "relatedProtocols": { "type": "array", "items": { "type": "string" } }
-             }
+            "type": "object",
+            "properties": {
+              "parent": { "type": "ref", "ref": "com.atproto.repo.strongRef" },
+              "children": { "type": "array", "items": { "type": "ref", "ref": "com.atproto.repo.strongRef" } },
+              "suites": { "type": "array", "items": { "type": "ref", "ref": "com.atproto.repo.strongRef" } },
+              "relatedProtocols": { "type": "array", "items": { "type": "ref", "ref": "com.atproto.repo.strongRef" } }
+            }
           },
           "tags": { "type": "array", "items": { "type": "string", "maxLength": 64 }, "maxLength": 10 },
-          "connectivity": {
-             "type": "object",
-             "properties": {
-                "shortUrl": { "type": "string" },
-                "qrCode": { "type": "string" }
-             }
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "shortUrl": { "type": "string" },
+              "qrCode": { "type": "string" }
+            }
           },
-          "attribution": { "type": "array", "items": { "type": "unknown" } },
-          "history": { "type": "array", "items": { "type": "unknown" } },
-          "changeDescription": { "type": "string", "maxLength": 1000 },
-          "endOfLifeAt": { "type": "string", "format": "datetime" },
-          "archived": { "type": "boolean" },
-          "createdAt": { "type": "string", "format": "datetime" }
+          "lifecycle": {
+            "type": "object",
+            "properties": {
+              "deprecatedAt": { "type": "string", "format": "datetime" },
+              "archived": { "type": "boolean" }
+            }
+          }
         }
       }
     }

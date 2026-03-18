@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useRepo } from "@/domain/repo";
-import { needs, protocols } from "@/data/seeds";
+import { needs, protocols, suites } from "@/data/seeds";
 
 export function SeedNetworkButton() {
     const repo = useRepo();
@@ -14,7 +14,7 @@ export function SeedNetworkButton() {
             // Seed Needs
             for (const nId of Object.keys(needs)) {
                 const need = needs[nId] as any;
-                const rootId = need.rootId || need.id;
+                const rootId = need.lineageId || need.id;
                 console.log(`Seeding Need: ${need.title}`, rootId);
                 await repo.updateNeedDraft?.(rootId, "1.0", need);
                 await repo.promoteNeedVersion?.(rootId, "1.0", "stable", "Initial Seed");
@@ -26,6 +26,15 @@ export function SeedNetworkButton() {
                 console.log(`Seeding Protocol: ${p.title}`);
                 await repo.updateProtocolDraft?.(p.id, "1.0", p);
                 await repo.promoteProtocolVersion?.(p.id, "1.0", "stable", "Initial Seed");
+            }
+
+            // Seed Suites
+            for (const sId of Object.keys(suites)) {
+                const s = suites[sId] as any;
+                const rootId = s.lineageId || s.id;
+                console.log(`Seeding Suite: ${s.title}`);
+                await (repo as any).updateSuiteDraft?.(rootId, "1.0", s);
+                await (repo as any).promoteSuiteVersion?.(rootId, "1.0", "stable", "Initial Seed");
             }
             alert("Network successfully seeded! Data should now appear in the AppView.");
         } catch (error) {

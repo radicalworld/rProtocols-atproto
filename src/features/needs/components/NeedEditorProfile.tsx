@@ -11,7 +11,7 @@ export default function NeedEditorProfile({
     onClose?: () => void;
 } = {}) {
     const params = useParams();
-    const rootId = propRootId || params.rootId || "";
+    const rootId = propRootId || params.lineageId || "";
     const { release, loading, error, latest, updateDraft, promote } = useNeed(rootId);
     const [form, setForm] = useState({ title: "", description: "", purpose: "", language: "", tags: "" });
     const [saving, setSaving] = useState(false);

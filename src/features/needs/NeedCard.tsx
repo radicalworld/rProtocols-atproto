@@ -41,8 +41,8 @@ export function NeedCard({
     }, [repo, needId]);
 
     const standaloneProtocols = useMemo(() => {
-        const suiteIds = new Set(suites.flatMap(s => s.includeProtocols?.map(p => p.rootId) || []));
-        return allProtocols.filter(p => !suiteIds.has(p.id));
+        const suiteLineageIds = new Set(suites.flatMap(s => s.includeProtocols?.map(p => p.lineageId) || []));
+        return allProtocols.filter(p => !suiteLineageIds.has(p.id));
     }, [suites, allProtocols]);
 
     const location = useLocation();
@@ -60,8 +60,8 @@ export function NeedCard({
 
         // If we're viewing a suite, it's expanded
         if (type1 === "suites" && slug1) {
-            const match = suites.find(s => s.rootId === slug1);
-            if (match) expandedSuiteId = match.rootId;
+            const match = suites.find(s => s.lineageId === slug1);
+            if (match) expandedSuiteId = match.lineageId;
         } 
         // If we're viewing a protocol, it's selected. Did they pass a suite context?
         else if (type1 === "protocols" && slug1) {
@@ -77,8 +77,8 @@ export function NeedCard({
             
             const suiteContext = searchParams.get("suite");
             if (suiteContext) {
-                const sMatch = suites.find(s => s.rootId === suiteContext);
-                if (sMatch) expandedSuiteId = sMatch.rootId;
+                const sMatch = suites.find(s => s.lineageId === suiteContext);
+                if (sMatch) expandedSuiteId = sMatch.lineageId;
             }
         }
         
@@ -116,7 +116,7 @@ export function NeedCard({
                     {(!layoutState.selectedProtocolId || layoutState.sourceColumn === "suites") && (
                         <ListCard
                             title="Suites"
-                            items={suites.map(s => ({ id: s.rootId, title: s.title, subtitle: s.description }))}
+                            items={suites.map(s => ({ id: s.lineageId, title: s.title, subtitle: s.description }))}
                             empty="No suites yet."
                             expandedRenderer={(suiteId) => {
                                 return (
@@ -126,14 +126,14 @@ export function NeedCard({
                                 );
                             }}
                             onItemClick={(suiteId) => {
-                                const suite = suites.find(s => s.rootId === suiteId);
+                                const suite = suites.find(s => s.lineageId === suiteId);
                                 if (suite) {
                                     const section = location.pathname.split("/")[0] || "collaboration";
                                     // Toggle behavior: if already expanded without protocol, close it by pulling back.
                                     if (layoutState.expandedSuiteId === suiteId && !layoutState.selectedProtocolId) {
                                         navigate(`/${section}`);
                                     } else {
-                                        navigate(`/${section}/suites/${suite.rootId}`);
+                                        navigate(`/${section}/suites/${suite.lineageId}`);
                                     }
                                 }
                             }}
@@ -164,7 +164,7 @@ export function NeedCard({
                     {!layoutState.selectedProtocolId && (
                         <ListCard
                             title="Sub-needs"
-                            items={(node?.children ?? []).map((c: any) => ({ id: c.needRootId || c.rootId, title: c.question || c.title, subtitle: c.purpose || c.description }))}
+                            items={(node?.children ?? []).map((c: any) => ({ id: c.needRootId || c.lineageId, title: c.question || c.title, subtitle: c.purpose || c.description }))}
                             empty="No sub-needs."
                             expandedRenderer={(childId) => <NeedCard needId={childId} />}
                         />

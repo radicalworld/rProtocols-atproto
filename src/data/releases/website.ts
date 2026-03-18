@@ -1,11 +1,13 @@
-import type { Release } from "@/domain/types";
+import type { ProtocolRelease as Release } from "@/domain/types";
 
-export const websiteReleases: Record<string, { current: string; releases: Record<string, Release> }> = {
+export const releasesWebsite: Record<string, { current: string; releases: Record<string, Release> }> = {
   "protocol-web-style": {
     current: "0.4",
     releases: {
       "0.4": {
         id: "protocol-web-style",
+        lineageId: "protocol-web-style",
+        slug: "protocol-web-style",
         version: "0.4",
         stage: "draft",
         date: "2025-10-06",

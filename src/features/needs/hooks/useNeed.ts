@@ -35,7 +35,7 @@ export function useNeed(rootId?: string, version?: string): NeedState {
       if (version) {
         needData = await repo.getNeedByVersion?.(rootId, version);
       } else {
-        needData = await repo.getNeedByRootId?.(rootId);
+        needData = await repo.getNeedByLineageId?.(rootId);
       }
       
       if (!needData) throw new Error("Need not found");

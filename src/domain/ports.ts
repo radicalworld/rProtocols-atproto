@@ -2,15 +2,15 @@ import type {
     SectionId, NeedId, SuiteId, ProtocolId,
     Need, NeedNode, Suite, Protocol, Mark, MarkVerb
 } from "./types";
-import type { ProtocolRoot, ProtocolVersion } from "./types";
+
 
 // ---------- READ PORT ----------
 export interface RPReadPort {
     listSections(): Promise<{ id: SectionId; title: string; intro: string }[]>;
     getNeedsBySection(section: SectionId): Promise<Need[]>;
     getNeedTree(needId: NeedId): Promise<NeedNode>;
-    getNeedByRootId?(rootId: string): Promise<Need | null>;
-    getNeedByVersion?(rootId: string, version: string): Promise<Need | null>;
+    getNeedByLineageId?(lineageId: string): Promise<Need | null>;
+    getNeedByVersion?(lineageId: string, version: string): Promise<Need | null>;
     getSuitesForNeed(needId: NeedId): Promise<Suite[]>;
     getProtocolsForNeed(needId: NeedId): Promise<Protocol[]>;
     getSuiteProtocols(suiteId: SuiteId): Promise<Protocol[]>;
@@ -19,9 +19,9 @@ export interface RPReadPort {
     getProtocol(id: string): Promise<Protocol | null>;
     getProtocols(): Promise<Protocol[]>;
     getSuite(id: string): Promise<Suite | null>;
-    // New resolvers (non-breaking; optional in adapters)
-    resolveProtocolSlug(slug: string): Promise<{ root: ProtocolRoot; preferredSlug: string } | null>;
-    getProtocolBySlug(slug: string): Promise<Protocol | null>;                // latest
+    // New resolvers
+    resolveProtocolSlug(slug: string): Promise<{ lineageId: string; preferredSlug: string } | null>;
+    getProtocolBySlug(slug: string): Promise<Protocol | null>;               
     getProtocolByVersion(slug: string, version: string): Promise<Protocol | null>;
     getProtocolByCid(cid: string): Promise<Protocol | null>;
 }
@@ -32,22 +32,22 @@ export interface RPWritePort {
     unfollow(subjectId: string): Promise<void>;
     adopt(subjectId: string, context?: string): Promise<void>;
     unadopt?(subjectId: string): Promise<void>;
-    createNeed(payload: Pick<Need, "title" | "description" | "parentRootId">): Promise<NeedId>;
+    createNeed(payload: Pick<Need, "title" | "description" | "parentLineageId">): Promise<NeedId>;
     createProtocol(payload: Pick<Protocol, "title" | "summary" | "body">): Promise<ProtocolId>;
     linkProtocolServesNeed(protocolId: ProtocolId, needId: NeedId): Promise<void>;
     addProtocolToSuite(protocolId: ProtocolId, suiteId: SuiteId): Promise<void>;
     // Publishing (stubs for now)
-    createProtocolRoot?(root: ProtocolRoot): Promise<ProtocolRoot>;
-    publishProtocolVersion?(v: ProtocolVersion): Promise<ProtocolVersion>;
-    renameProtocolSlug?(rootId: string, newSlug: string): Promise<void>;
+    createProtocolRoot?(payload: { lineageId: string, slug: string }): Promise<void>;
+    publishProtocolVersion?(v: Protocol): Promise<Protocol>;
+    renameProtocolSlug?(lineageId: string, newSlug: string): Promise<void>;
     
     // Need Editing & Publishing
-    updateNeedDraft(rootId: string, version: string, patch: any): Promise<void>;
-    promoteNeedVersion(rootId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string): Promise<void>;
+    updateNeedDraft(lineageId: string, version: string, patch: any): Promise<void>;
+    promoteNeedVersion(lineageId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string): Promise<void>;
 
     // Protocol Editing & Publishing
-    updateProtocolDraft(rootId: string, version: string, patch: any): Promise<void>;
-    promoteProtocolVersion(rootId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string): Promise<void>;
+    updateProtocolDraft(lineageId: string, version: string, patch: any): Promise<void>;
+    promoteProtocolVersion(lineageId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string): Promise<void>;
 }
 
 // ---------- REPOSITORY (combined) ----------

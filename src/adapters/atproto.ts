@@ -1,8 +1,21 @@
 import { AtpAgent } from "@atproto/api";
 import type { RPReadPort, RPWritePort } from "@/domain/ports";
-import type { Mark, MarkVerb } from "@/domain/types";
+import type { Mark, MarkVerb, Protocol } from "@/domain/types";
 import type { NeedRelease } from "@/features/needs/lib/releases";
+import { cidString } from "@/lib/cid";
 import { mockRepo } from "@/adapters/mock";
+
+function getDeterministicRkey(rootId: string, version: string): string {
+    // ATProto Record Keys (rkeys) are strictly bounded to 15 characters max.
+    // DJB2 hash the identifier to generate a consistent, lexically valid safe key.
+    const str = `${rootId}-v${version.replace(".", "-")}`;
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash |= 0;
+    }
+    return `rp${Math.abs(hash).toString(36)}`.slice(0, 15);
+}
 
 // ---- collections used in rProtocols ----
 const NS = {
@@ -33,6 +46,10 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
         private viewerDid?: string | null  // where follow/unfollow marks are stored
     ) {}
 
+    async getProtocols(options?: { suiteId?: string; ancestorId?: string; }): Promise<Protocol[]> {
+        return [];
+    }
+
     // ---------- MARKS (needed by FollowEye/useFollowed) ----------
      async getMarks(verb: MarkVerb): Promise<Mark[]> {
         if (!this.viewerDid) return [];
@@ -47,6 +64,7 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
             context: r.value?.context,
             createdAt: r.value?.createdAt ?? new Date().toISOString(),
             subjectKind: "protocol", // assuming protocol for now since rProtocols marks protocols
+            subjectLineageId: r.value?.subject?.uri,
             subjectRootId: r.value?.subject?.uri,
             actorDid: this.viewerDid ?? "",
         }));
@@ -162,8 +180,9 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
         // For this hybrid implementation, the mock handles state, we just echo a new putRecord.
         // We use rootId as the rkey namespace (or generate a specific rkey based on version).
         
-        const rkey = `${rootId}-v${version.replace(".", "-")}`;
+        const rkey = getDeterministicRkey(rootId, version);
 
+        const dummyCid = await cidString("mock");
         try {
             await this.agent.com.atproto.repo.putRecord({
                 repo: this.viewerDid,
@@ -171,37 +190,28 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
                 rkey: rkey,
                 record: {
                     $type: "org.rp.need",
-                    rootId: rootId,
+                    lineage: {
+                        id: rootId,
+                        root: { uri: `at://${this.viewerDid}/org.rp.need/${rootId}`, cid: dummyCid }
+                    },
+                    slug: rootId,
                     version: version,
                     stage: "draft",
-                    date: new Date().toISOString().split("T")[0],
+                    createdAt: new Date().toISOString(),
                     language: patch.language ?? "en",
-                    provenance: {
-                        authorDid: this.viewerDid,
-                        signature: undefined,
+                    authorship: {
+                        authorDid: this.viewerDid
                     },
-                    question: patch.title ?? "Draft Title",
+                    title: patch.title ?? "Draft Title",
                     description: patch.description ?? "",
                     purpose: patch.purpose ?? "",
-                subject: {
-                    subjectKind: "org.rp.need",
-                    subjectRootId: rootId,
-                    actorDid: this.viewerDid
-                },
-                relations: {
-                        parentRootId: undefined,
-                        childRootIds: [],
-                        suiteIds: patch.tags?.length ? [patch.tags[0]] : [],
-                        relatedProtocols: [],
+                    relations: {
+                        suites: (patch as any).suiteLineageIds?.map((id: string) => ({ uri: id, cid: dummyCid })) || [],
+                        children: (patch as any).childLineageIds?.map((id: string) => ({ uri: id, cid: dummyCid })) || [],
+                        relatedProtocols: (patch as any).relatedProtocolLineageIds?.map((id: string) => ({ uri: id, cid: dummyCid })) || [],
+                        parent: (patch as any).parentLineageId ? { uri: (patch as any).parentLineageId, cid: dummyCid } : undefined
                     },
-                    tags: patch.tags ?? [],
-                    connectivity: { shortUrl: "", qrCode: "" },
-                    attribution: [],
-                    history: [],
-                    changeDescription: "",
-                    endOfLifeAt: undefined,
-                    archived: false,
-                    createdAt: new Date().toISOString(),
+                    tags: patch.tags ?? []
                 },
             });
             
@@ -215,7 +225,7 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
     async promoteNeedVersion(rootId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string): Promise<void> {
         if (!this.viewerDid) return;
         
-        const rkey = `${rootId}-v${version.replace(".", "-")}`;
+        const rkey = getDeterministicRkey(rootId, version);
         
         try {
             // Fetch existing draft to preserve its content
@@ -244,7 +254,8 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
     async updateProtocolDraft(rootId: string, version: string, patch: any): Promise<void> {
         if (!this.viewerDid) return;
 
-        const rkey = `${rootId}-v${version.replace(".", "-")}`;
+        const rkey = getDeterministicRkey(rootId, version);
+        const dummyCid = await cidString("mock");
         try {
             await this.agent.com.atproto.repo.putRecord({
                 repo: this.viewerDid,
@@ -252,33 +263,24 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
                 rkey: rkey,
                 record: {
                     $type: "org.rp.protocol",
-                    rootId: rootId,
+                    lineage: {
+                        id: rootId,
+                        root: { uri: `at://${this.viewerDid}/org.rp.protocol/${rootId}`, cid: dummyCid }
+                    },
+                    slug: rootId,
                     version: version,
                     stage: "draft",
-                    date: new Date().toISOString().split("T")[0],
+                    createdAt: new Date().toISOString(),
                     language: patch.language ?? "en",
-                    provenance: {
-                        authorDid: this.viewerDid,
+                    authorship: {
+                        authorDid: this.viewerDid
                     },
+                    needRef: { uri: `at://${this.viewerDid}/org.rp.need/mock`, cid: dummyCid },
                     title: patch.title ?? "Draft Title",
                     summary: patch.summary ?? "",
-                    body: patch.body ?? "",
-                    subject: {
-                        subjectKind: "org.rp.protocol",
-                        subjectRootId: rootId,
-                        actorDid: this.viewerDid
-                    },
-                    relations: {
-                        needId: undefined, // Add correct mapping when available
-                        suiteIds: patch.tags?.length ? [patch.tags[0]] : [],
-                        relatedProtocols: [],
-                    },
-                    tags: patch.tags ?? [],
-                    connectivity: { shortUrl: "", qrCode: "" },
-                    attribution: [],
-                    history: [],
-                    changeDescription: "",
-                    createdAt: new Date().toISOString(),
+                    protocolBody: patch.protocolBody ?? (patch as any).body ?? "",
+                    tags: (patch as any).tags ?? patch.tags ?? [],
+                    ...(patch.changeDescription ? { changeDescription: patch.changeDescription } : {})
                 },
             });
             console.log(`PDS: Successfully broadcasted org.rp.protocol draft update to PDS under rkey: ${rkey}`);
@@ -290,7 +292,7 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
 
     async promoteProtocolVersion(rootId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string): Promise<void> {
         if (!this.viewerDid) return;
-        const rkey = `${rootId}-v${version.replace(".", "-")}`;
+        const rkey = getDeterministicRkey(rootId, version);
         try {
             const existing = await this.agent.com.atproto.repo.getRecord({
                 repo: this.viewerDid,
@@ -308,6 +310,71 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
             });
         } catch (e) {
             console.error("Failed to promote protocol version on PDS:", e);
+        }
+    }
+
+    // ---------- Suite write operations (Publishing) ----------
+    async updateSuiteDraft(rootId: string, version: string, patch: any): Promise<void> {
+        if (!this.viewerDid) return;
+
+        const rkey = getDeterministicRkey(rootId, version);
+        const dummyCid = await cidString("mock");
+        
+        try {
+            await this.agent.com.atproto.repo.putRecord({
+                repo: this.viewerDid,
+                collection: "org.rp.suite",
+                rkey: rkey,
+                record: {
+                    $type: "org.rp.suite",
+                    lineage: {
+                        id: rootId,
+                        root: { uri: `at://${this.viewerDid}/org.rp.suite/${rootId}`, cid: dummyCid }
+                    },
+                    slug: rootId,
+                    version: version,
+                    stage: "draft",
+                    createdAt: new Date().toISOString(),
+                    language: patch.language ?? "en",
+                    authorship: {
+                        authorDid: this.viewerDid
+                    },
+                    title: patch.title ?? "Draft Suite",
+                    description: patch.description ?? patch.summary ?? "",
+                    purpose: patch.purpose ?? "",
+                    members: {
+                        protocols: patch.includeProtocols?.map((p: any) => ({ uri: p.lineageId || p.uri || "", cid: dummyCid })) || []
+                    },
+                    tags: patch.tags ?? []
+                }
+            });
+            console.log(`PDS: Successfully broadcasted org.rp.suite draft update to PDS under rkey: ${rkey}`);
+        } catch (e: any) {
+            console.error("PDS Save Error (Suite):", e);
+            throw e;
+        }
+    }
+
+    async promoteSuiteVersion(rootId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string): Promise<void> {
+        if (!this.viewerDid) return;
+        const rkey = getDeterministicRkey(rootId, version);
+        try {
+            const existing = await this.agent.com.atproto.repo.getRecord({
+                repo: this.viewerDid,
+                collection: "org.rp.suite",
+                rkey: rkey
+            });
+            const record = existing.data.value as any;
+            record.stage = toStage;
+            if (changeDescription) record.changeDescription = changeDescription;
+            await this.agent.com.atproto.repo.putRecord({
+                repo: this.viewerDid,
+                collection: "org.rp.suite",
+                rkey: rkey,
+                record: record
+            });
+        } catch (e) {
+            console.error("Failed to promote suite version on PDS:", e);
         }
     }
 }

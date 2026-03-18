@@ -1,23 +1,25 @@
-import type { Release } from "@/domain/types";
+import type { ProtocolRelease as Release } from "@/domain/types";
 
-export const rootReleases: Record<string, { current: string; releases: Record<string, Release> }> = {
+export const releasesRoot: Record<string, { current: string; releases: Record<string, Release> }> = {
     "protocol-creation": {
     current: "1.0",
     releases: {
       "1.0": {
         id: "protocol-creation",
+        lineageId: "protocol-creation",
+        slug: "protocol-creation",
         did: "did:web:r.radical.world/protocol-creation",
         cid: "bafyproto-creation-1-0-placeholder",
-        previousCid: "bafyproto-creation-0-9-placeholder",
+        prevCid: "bafyproto-creation-0-9-placeholder",
         version: "1.0",
-        stage: "published",
+        stage: "stable",
         date: "2025-10-16",
         language: "en",
-        needId: "create-open-protocol",
+        needLineageId: "create-open-protocol",
         purpose: "Establish the first principles for creating open, evolving protocols that serve life and collaboration.",
         scope: { appliesTo: ["collabs", "ecosystems"], region: { level: "global" } },
         tags: ["root", "creation", "first-principles", "openness"],
-        suiteIds: ["suite-root-protocols"],
+        suiteLineageIds: ["suite-root-protocols"],
         relatedProtocols: ["protocol-evolution", "protocol-attribution", "protocol-publishing"],
         followEnabled: true,
         adoptEnabled: true,
@@ -52,10 +54,13 @@ What might we learn when shared experiments contradict assumptions?
 Future iterations may explore authorship, validation, and shared trust.`
       },
       "0.9": {
-        id: "protocol-creation",
+        id: "protocol-publishing",
+        lineageId: "protocol-publishing",
+        slug: "protocol-publishing",
+        cid: "bafyproto-pub-0-9",
         version: "0.9",
-        stage: "rc",
-        date: "2025-10-02",
+        stage: "candidate",
+        date: "2025-10-08",
         language: "en",
         purpose: "Pre-publish freeze with examples and final clarifications.",
         tags: ["root", "creation", "rc"],
@@ -74,8 +79,34 @@ Freeze scope; finalize examples and role clarity ahead of 1.0.
 - Reviewers confirm clarity for 1.0.`,
         attribution: [{ name: "rCollabs Core", did: "did:web:r.radical.world" }]
       },
+      "0.8": {
+        id: "protocol-publishing",
+        lineageId: "protocol-publishing",
+        slug: "protocol-publishing",
+        cid: "bafyproto-pub-0-8",
+        version: "0.8",
+        stage: "draft",
+        date: "2025-09-15",
+        language: "en",
+        purpose: "Early draft of structure and workflow.",
+        tags: ["root", "creation", "draft"],
+        followEnabled: true,
+        adoptEnabled: false,
+        followCount: 12,
+        adoptCount: 0,
+        protocolBody: `## Intent
+Explore a shared structure for proposing and evolving protocols.
+## Practice
+- Sketch candidate attributes and basic workflow.
+- Share early to gather open feedback.
+## Signals
+- Review comments cluster around clarity and usefulness.`,
+        attribution: [{ name: "Jose A. Leal", did: "did:web:jose.r.radical.world" }]
+      },
       "0.6": {
         id: "protocol-creation",
+        lineageId: "protocol-creation",
+        slug: "protocol-creation",
         version: "0.6",
         stage: "draft",
         date: "2025-09-20",
@@ -103,8 +134,30 @@ Explore a shared structure for proposing and evolving protocols.
     releases: {
       "0.8": {
         id: "protocol-evolution",
+        lineageId: "protocol-evolution",
+        slug: "protocol-evolution",
+        cid: "bafyproto-evol-0-8",
         version: "0.8",
-        stage: "rc",
+        stage: "draft",
+        date: "2025-10-18",
+        language: "en",
+        purpose: "Testing protocol publishing boundaries.",
+        tags: ["root", "evolution", "lineage"],
+        followEnabled: true,
+        adoptEnabled: false,
+        followCount: 22,
+        adoptCount: 3,
+        shortUrl: "r.pro/evolve",
+        protocolBody: `Minor updates vs major forks; history & lineage.`,
+        attribution: [{ name: "rCollabs Core", did: "did:web:r.radical.world" }]
+      },
+      "0.3": {
+        id: "protocol-evolution",
+        lineageId: "protocol-evolution",
+        slug: "protocol-evolution",
+        cid: "bafyproto-evol-0-3",
+        version: "0.3",
+        stage: "candidate",
         date: "2025-10-12",
         language: "en",
         purpose: "Clarify when to update vs fork; maintain readable lineage.",
@@ -132,9 +185,12 @@ Explore a shared structure for proposing and evolving protocols.
     releases: {
       "1.1": {
         id: "protocol-attribution",
+        lineageId: "protocol-attribution",
+        slug: "protocol-attribution",
+        cid: "bafyproto-attr-1-1",
         version: "1.1",
-        stage: "published",
-        date: "2025-10-08",
+        stage: "stable",
+        date: "2025-10-10",
         language: "en",
         purpose: "Make contributions visible with DIDs and public history.",
         tags: ["root", "attribution", "DID", "recognition"],
@@ -159,8 +215,10 @@ Explore a shared structure for proposing and evolving protocols.
     releases: {
       "1.0": {
         id: "protocol-adoption",
+        lineageId: "protocol-adoption",
+        slug: "protocol-adoption",
         version: "1.0",
-        stage: "published",
+        stage: "stable",
         date: "2025-09-30",
         language: "en",
         purpose: "Define 'Adopt' and how it’s signaled and verified.",

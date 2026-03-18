@@ -1,7 +1,7 @@
 // src/features/needs/lib/releases.ts
 // Lightweight client-side cache + helpers, modeled after protocols' releases utils.
 
-type Stage = 'draft' | 'candidate' | 'stable' | 'deprecated';
+export type Stage = 'draft' | 'candidate' | 'stable' | 'deprecated';
 
 export type NeedRelease = {
   rootId: string;

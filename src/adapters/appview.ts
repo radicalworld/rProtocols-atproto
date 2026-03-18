@@ -1,172 +1,185 @@
 // src/adapters/appview.ts
-import type { Need, Protocol, SectionId, Suite } from "@/domain/types";
+import type { Need, Protocol, SectionId, Suite, NeedNode, Mark } from "@/domain/types";
+import { RPReadPort } from "@/domain/ports";
+const APPVIEW_URL = import.meta.env.VITE_APPVIEW_URL || "http://localhost:3010/xrpc";
 
-const APPVIEW_URL = "http://16.146.139.100:3010/api";
+async function xrpc(endpoint: string, payload: any) {
+    const res = await fetch(`${APPVIEW_URL}/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+        if (res.status === 404) return null;
+        throw new Error(`XRPC Error: ${res.statusText}`);
+    }
+    return await res.json();
+}
 
-export class AppViewAdapter {
-    async getNeedByRootId(rootId: string): Promise<Need | null> {
+export class AppViewAdapter implements RPReadPort {
+    
+    // --- LEGACY RPReadPort Implementations (Mapped to new XRPC) ---
+
+    async getNeedByLineageId(lineageId: string): Promise<Need | null> {
         try {
-            const res = await fetch(`${APPVIEW_URL}/needs/${encodeURIComponent(rootId)}`);
-            if (!res.ok) return null;
-            const data = await res.json();
-            if (data && data.success && data.need) {
-                console.log(
-                    "%c[APPVIEW HIT] %cLoaded Need from Ubuntu SQLite: %c" + data.need.title, 
-                    "background: #10B981; color: white; padding: 2px 4px; border-radius: 4px;",
-                    "color: #10B981; font-weight: bold;",
-                    "color: inherit; font-weight: normal;"
-                );
-                // the sqlite row looks like: { uri, cid, rootId, version, authorDid, title, purpose, description }
-                // Map it to Need domain object
-                const n = data.need;
+            const data = await xrpc('app.rp.entity.getCurrent', { lineageId, policy: 'latest-any' });
+            if (data?.record) {
+                const n = data.record;
+                const bundledRels = n.bundledRelations || [];
+                const suiteLineageIds = bundledRels.filter((r: any) => r.type === 'suiteRef').map((r: any) => r.lineageId);
+                const childLineageIds = bundledRels.filter((r: any) => r.type === 'childNeedRef').map((r: any) => r.lineageId);
+                const relatedProtocolLineageIds = bundledRels.filter((r: any) => r.type === 'protocolRef').map((r: any) => r.lineageId);
+
                 return {
-                    rootId: n.rootId,
-                    title: n.title,
-                    purpose: n.purpose,
-                    description: n.description,
-                    language: "en",
-                    parentRootId: null,
-                    childRootIds: [],
-                    suiteIds: [],
-                    tags: []
+                    id: n.slug || n.lineageId || n.uri || "",
+                    lineageId: n.lineageId || n.uri || "",
+                    slug: n.slug || n.lineageId || "",
+                    title: n.title || n.question || "Untitled Need",
+                    description: n.description || "",
+                    language: n.language || "en",
+                    purpose: n.purpose || "",
+                    suiteLineageIds,
+                    relatedProtocolLineageIds,
+                    childLineageIds,
+                    parentLineageId: null,
                 } as Need;
             }
-        } catch (err) {
-            console.error("AppView getNeedByRootId error:", err);
-        }
+        } catch (err) { console.error("AppView getNeedByLineageId error:", err); }
         return null;
     }
 
     async getProtocol(id: string): Promise<Protocol | null> {
-        try {
-            const res = await fetch(`${APPVIEW_URL}/protocols/${encodeURIComponent(id)}`);
-            if (!res.ok) return null;
-            const data = await res.json();
-            if (data && data.success && data.protocol) {
-                console.log(
-                    "%c[APPVIEW HIT] %cLoaded Protocol from Ubuntu SQLite: %c" + data.protocol.title, 
-                    "background: #3B82F6; color: white; padding: 2px 4px; border-radius: 4px;",
-                    "color: #3B82F6; font-weight: bold;",
-                    "color: inherit; font-weight: normal;"
-                );
-                const p = data.protocol;
-                return {
-                    id: p.rootId, // or p.uri if you mapping uri
-                    title: p.title,
-                    summary: p.description,
-                    body: p.body || ""
-                };
-            }
-        } catch (err) {
-            console.error("AppView getProtocol error:", err);
-        }
-        return null;
+        // Technically this asks for ID but we'll assume lineage or slug
+        return this.getProtocolBySlug(id); // fallback
     }
 
-    async getProtocols(options?: { suiteId?: string; ancestorId?: string }): Promise<Protocol[]> {
+    async getProtocols(): Promise<Protocol[]> {
         try {
-            const res = await fetch(`${APPVIEW_URL}/protocols`);
-            if (!res.ok) return [];
-            const data = await res.json();
-            if (data && data.success && data.protocols) {
-                console.log(
-                    "%c[APPVIEW HIT] %cLoaded Protocol List from Ubuntu SQLite", 
-                    "background: #F59E0B; color: white; padding: 2px 4px; border-radius: 4px;",
-                    "color: #F59E0B; font-weight: bold;"
-                );
-                return data.protocols.map((p: any) => ({
-                    id: p.rootId,
-                    title: p.title,
-                    summary: p.description,
-                    body: p.body || ""
+            const data = await xrpc('app.rp.graph.listRecentChanges', { kind: 'protocol', limit: 100 });
+            if (data?.records) {
+                return data.records.map((p: any) => ({
+                    id: p.uri || p.slug || p.lineageId || "", 
+                    lineageId: p.lineageId || p.uri || "",
+                    slug: p.slug || "",
+                    title: p.title || "",
+                    summary: p.description || p.summary || "",
+                    body: p.protocolBody || p.body || ""
                 }));
             }
-        } catch (err) {
-            console.error("AppView getProtocols error:", err);
-        }
+        } catch (err) { console.error("AppView getProtocols error:", err); }
         return [];
     }
 
     async getSuitesForNeed(needId: string): Promise<Suite[]> {
         try {
-            const res = await fetch(`${APPVIEW_URL}/needs/${encodeURIComponent(needId)}/suites`);
-            if (!res.ok) return [];
-            const data = await res.json();
-            if (data && data.success && data.suites) {
-                console.log(
-                    "%c[APPVIEW HIT] %cLoaded Suites for Need from Ubuntu SQLite", 
-                    "background: #F59E0B; color: white; padding: 2px 4px; border-radius: 4px;",
-                    "color: #F59E0B; font-weight: bold;"
-                );
-                return data.suites.map((s: any) => ({
-                    rootId: s.rootId,
-                    title: s.title,
-                    summary: s.description,
-                    childRootIds: [],
-                    tagline: ""
-                }));
+            const needData = await xrpc('app.rp.entity.getCurrent', { lineageId: needId });
+            if (!needData?.record) return [];
+
+            const bundledRels = needData.record.bundledRelations || [];
+            const suiteIds = bundledRels.filter((r: any) => r.type === 'suiteRef').map((r: any) => r.lineageId);
+            
+            const suites: Suite[] = [];
+            for (const sid of suiteIds) {
+                const sData = await xrpc('app.rp.entity.getCurrent', { lineageId: sid });
+                if (sData?.record) {
+                    const s = sData.record;
+                    suites.push({
+                        id: s.slug || s.lineageId || s.uri || "",
+                        lineageId: s.lineageId || s.uri || "",
+                        slug: s.slug || s.lineageId || "",
+                        title: s.title || "Untitled Suite",
+                        description: s.description || "",
+                        language: s.language || "en",
+                        includeProtocols: s.members?.protocols?.map((p: any) => ({ lineageId: p.uri })) || []
+                    });
+                }
             }
-        } catch (err) {
-            console.error("AppView getSuitesForNeed error:", err);
+            return suites;
+        } catch (error) {
+            console.error("AppView getSuitesForNeed error:", error);
+            return [];
         }
-        return [];
     }
 
     async getSuiteProtocols(suiteId: string): Promise<Protocol[]> {
         try {
-            const res = await fetch(`${APPVIEW_URL}/suites/${encodeURIComponent(suiteId)}/protocols`);
-            if (!res.ok) return [];
-            const data = await res.json();
-            if (data && data.success && data.protocols) {
-                console.log(
-                    "%c[APPVIEW HIT] %cLoaded Protocols for Suite from Ubuntu SQLite", 
-                    "background: #F59E0B; color: white; padding: 2px 4px; border-radius: 4px;",
-                    "color: #F59E0B; font-weight: bold;"
-                );
-                return data.protocols.map((p: any) => ({
-                    id: p.rootId,
-                    title: p.title,
-                    summary: p.description,
-                    body: p.body || ""
-                }));
+            const suiteData = await xrpc('app.rp.entity.getCurrent', { lineageId: suiteId });
+            if (!suiteData?.record) return [];
+
+            const bundledRels = suiteData.record.bundledRelations || [];
+            const protoIds = bundledRels.filter((r: any) => r.type === 'protocolRef').map((r: any) => r.lineageId);
+            
+            const protos: Protocol[] = [];
+            for (const pid of protoIds) {
+                const pData = await xrpc('app.rp.entity.getCurrent', { lineageId: pid });
+                if (pData?.record) {
+                    const p = pData.record;
+                    protos.push({
+                        id: p.slug || p.lineageId || p.uri || "",
+                        lineageId: p.lineageId || p.uri || "",
+                        slug: p.slug || p.lineageId || "",
+                        title: p.title || "Untitled Protocol",
+                        summary: p.summary || "",
+                        body: p.protocolBody || p.body || ""
+                    });
+                }
             }
-        } catch (err) {
-            console.error("AppView getSuiteProtocols error:", err);
+            return protos;
+        } catch (error) {
+            console.error("AppView getSuiteProtocols error:", error);
+            return [];
         }
-        return [];
     }
 
-    async getNeedsBySection(sectionId: SectionId): Promise<Need[]> {
+    async getProtocolBySlug(slug: string): Promise<Protocol | null> {
         try {
-            // Re-using the generic /protocols endpoint methodology for this proxy iteration
-            const res = await fetch(`${APPVIEW_URL}/needs`); 
-            if (!res.ok) return [];
-            const data = await res.json();
-            if (data && data.success && data.needs) {
-                console.log(
-                    "%c[APPVIEW HIT] %cLoaded Root Needs from Ubuntu SQLite", 
-                    "background: #F59E0B; color: white; padding: 2px 4px; border-radius: 4px;",
-                    "color: #F59E0B; font-weight: bold;"
-                );
-                return data.needs
-                    .filter((n: any) => n.tags?.includes("root")) // Temporary client-side filtering until robust taxonomy API indexing is implemented
-                    .map((n: any) => ({
-                        rootId: n.rootId,
-                        title: n.title,
-                        purpose: n.purpose,
-                        description: n.description,
-                        language: "en",
-                        parentRootId: null,
-                        childRootIds: [],
-                        suiteIds: [],
-                        tags: []
-                    }));
+            // For now, if passed a lineageId, query by lineageId directly. 
+            // A real slug lookup requires an index over 'slug' which the backend might just resolve in getRecord
+            const data = await xrpc('app.rp.entity.getCurrent', { lineageId: slug, policy: 'latest-any' });
+            if (data?.record) {
+                const p = data.record;
+                return {
+                    id: p.slug || p.lineageId || p.uri || "", 
+                    lineageId: p.lineageId || p.uri || "",
+                    slug: p.slug || "",
+                    title: p.title || "",
+                    summary: p.description || p.summary || "",
+                    body: p.protocolBody || p.body || ""
+                };
             }
-        } catch (err) {
-            console.error("AppView getNeedsBySection error:", err);
-        }
-        return [];
+        } catch (err) { console.error("AppView getProtocolBySlug error:", err); }
+        return null;
     }
-}
 
-export const appViewAdapter = new AppViewAdapter();
+    // --- NEW XRPC WRAPPERS (To be consumed by Advanced UI) ---
+
+    async xrpcGetLineage(lineageId: string) {
+        return await xrpc('app.rp.entity.getLineage', { lineageId });
+    }
+
+    async xrpcGetForks(lineageId: string) {
+        return await xrpc('app.rp.graph.getForks', { lineageId });
+    }
+
+    async xrpcGetRelations(lineageId: string) {
+        return await xrpc('app.rp.graph.getRelations', { subject: { lineageId } });
+    }
+
+    async xrpcSearchEntities(q: string, kind?: string) {
+        return await xrpc('app.rp.search.searchEntities', { q, kind });
+    }
+
+    // ----------------------------------------------------
+    // Stubs to fulfill RPReadPort TS Requirements
+    // ----------------------------------------------------
+    async listSections() { return []; }
+    async getNeedsBySection() { return []; }
+    async getNeedTree() { return { id: "draft-nd-a", version: "1.0", stage: "stable", date: "", need: { id: "a" } as Need, suites: [] as Suite[] } as unknown as NeedNode; }
+    async getNeedByVersion() { return null; }
+    async getProtocolsForNeed() { return []; }
+    async getMarks() { return []; }
+    async getSuite() { return null; }
+    async resolveProtocolSlug() { return null; }
+    async getProtocolByVersion() { return null; }
+    async getProtocolByCid() { return null; }
+}

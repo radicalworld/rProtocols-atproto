@@ -14,13 +14,20 @@ export function NeedVersionSwitcher({
   className?: string;
 }) {
   const items = listNeedReleases(rootId).map((r) => ({ version: r.version, stage: r.stage }));
+  const stageDisplayMap: Record<string, string> = {
+    draft: "STILL EVOLVING",
+    candidate: "READY FOR REVIEW",
+    stable: "READY TO USE",
+    archived: "ARCHIVED"
+  };
+
   return (
     <VersionSwitcherCore
       items={items}
       current={currentVersion}
       onChange={onChange}
       hideStage="stable"
-      stageLabel={(s) => (s === "candidate" ? "CANDIDATE" : s?.toUpperCase() ?? "")}
+      stageLabel={(s) => stageDisplayMap[s] || (s === "candidate" ? "READY FOR REVIEW" : s?.toUpperCase() ?? "")}
       className={className}
     />
   );
