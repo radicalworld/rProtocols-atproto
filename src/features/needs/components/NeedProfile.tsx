@@ -4,6 +4,7 @@ import { useParams, Navigate, useNavigate } from "react-router-dom";
 import { useRepo } from "@/domain/repo";
 import type { Need } from "@/domain/types";
 import { FollowEye } from "@/features/marks/FollowEye";
+import { useFollowed } from "@/features/marks/useFollowed";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { parseVersion } from "@/lib/version";
@@ -13,13 +14,18 @@ import { NeedVersionSwitcher } from "@/features/needs/components/NeedVersionSwit
 import { useNeed, useNeedReleases } from "@/features/needs/hooks";
 import { Button } from "@/components/ui/button";
 import { Edit } from "lucide-react";
+import { useSession } from "@/features/auth/SessionProvider";
 
 export function NeedProfile() {
   const { rootId = "" } = useParams();
   const nav = useNavigate();
   const repo = useRepo();
+  const { session } = useSession();
   const [n, setN] = useState<Need | null>(null);
   const [notFound, setNotFound] = useState(false);
+
+  // Dynamically overlay tracking signal offsets
+  const { isFollowed } = useFollowed(n?.lineageId ?? "");
 
   // determine rootId and version from URL (like slug@ver pattern)
   const parsed = useMemo(() => {
@@ -67,7 +73,10 @@ export function NeedProfile() {
   const purpose = release?.purpose ?? n.purpose ?? "";
   const tags = release?.tags ?? [];
   const language = release?.language ?? "";
-  const followCount = release?.followCount ?? 0;
+  
+  const baseFollow = release?.followCount ?? 0;
+  const followCount = isFollowed && baseFollow === 0 ? 1 : baseFollow;
+  
   const shortUrl = release?.shortUrl;
   const qrCode = release?.qrCode;
   const attribution = release?.attribution ?? [];
@@ -81,10 +90,12 @@ export function NeedProfile() {
         <div className="flex items-start justify-between">
           <h1 className="text-2xl font-semibold">{n.title}</h1>
           <div className="flex items-center gap-2">
+            {session && (
             <Button variant="outline" size="sm" onClick={() => nav(`/needs/${encodeURIComponent(n.lineageId)}/edit`)}>
               <Edit className="w-4 h-4 mr-2" />
               Edit Option
             </Button>
+            )}
             <FollowEye subjectId={n.lineageId} label="Follow need" />
           </div>
         </div>

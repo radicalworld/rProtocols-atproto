@@ -1,20 +1,32 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useEffect, useState, useMemo } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { useProtocolEditor } from "@/features/protocols/hooks/useProtocolEditor";
+import { useRepo } from "@/domain/repo";
 import TiptapEditor from "@/components/ui/TiptapEditor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { X } from "lucide-react";
 
 export default function ProtocolEditorProfile({
     protocolId: propRootId,
+    parentNeedId,
+    isNew = false,
     onClose
 }: {
     protocolId?: string;
+    parentNeedId?: string | null;
+    isNew?: boolean;
     onClose?: () => void;
 } = {}) {
     const params = useParams();
-    const rootId = propRootId || params.id || "";
-    const { draft, loading, error, latest, publishProtocol } = useProtocolEditor(rootId);
+    const rootId = propRootId || params.id || (isNew ? "new" : "");
+    // If we're creating a new protocol, we DO NOT fetch the draft from the backend.
+    const { draft: fetchedDraft, loading, error, latest, publishProtocol } = useProtocolEditor(isNew ? undefined : rootId);
+    const repo = useRepo();
+    const nav = useNavigate();
+    
+    // Fallback to a blank state immediately if 'isNew' is enforced
+    const draft = useMemo(() => isNew ? { rootId: "new", version: "0.1.0", stage: "draft", title: "", summary: "", body: "", language: "en", tags: [] } as any : fetchedDraft, [isNew, fetchedDraft]);
+
     const [form, setForm] = useState({ title: "", summary: "", body: "", language: "", tags: "", changeDescription: "" });
     const [saving, setSaving] = useState(false);
     
@@ -34,7 +46,7 @@ export default function ProtocolEditorProfile({
                 summary: draft.summary ?? "",
                 body: draft.body ?? "",
                 language: draft.language ?? "en",
-                tags: draft.tags ? draft.tags.join(", ") : "",
+                tags: draft.tags ? (Array.isArray(draft.tags) ? draft.tags.join(", ") : draft.tags) : "",
                 changeDescription: "" // Reset per modal publish open
             });
             // Setup defaults for Modal
@@ -45,11 +57,9 @@ export default function ProtocolEditorProfile({
         }
     }, [draft]);
 
-    console.log("🖥️ RENDER. isInitialized:", isInitialized, "Form body length:", form.body?.length);
-
-    if (loading) return <div className="p-6 text-sm text-gray-500">Loading editor…</div>;
-    if (error) return <div className="p-6 text-red-600">{error}</div>;
-    if (!draft) return <div className="p-6 text-sm text-gray-500">No draft available.</div>;
+    if (!isNew && loading) return <div className="p-6 text-sm text-gray-500">Loading editor…</div>;
+    if (!isNew && error) return <div className="p-6 text-red-600">{error}</div>;
+    if (!draft) return <div className="p-6 text-sm text-gray-500">No protocol layout available.</div>;
     if (!isInitialized) return <div className="p-6 text-sm text-gray-500 flex items-center gap-2"><div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /> Preparing editor…</div>;
 
     const canEdit = draft.stage === "draft" || draft.stage === "candidate";
@@ -85,14 +95,38 @@ export default function ProtocolEditorProfile({
                 changeDescription: form.changeDescription || undefined
             };
             
-            await publishProtocol(targetVersionType, targetStage, currentContent);
-            
-            setIsSaveModalOpen(false);
-            if (onClose) {
-                // Return to viewer gracefully
-                onClose();
+            if (isNew) {
+                const pid = await repo.createProtocol({
+                    title: form.title || "Untitled Protocol",
+                    summary: form.summary,
+                    body: form.body,
+                    tags: form.tags.split(",").map(t => t.trim()).filter(Boolean),
+                    language: form.language || "en"
+                });
+                if (parentNeedId) {
+                    await repo.linkProtocolServesNeed(pid, parentNeedId);
+                }
+                
+                // Automatically set the author to follow their new creation
+                await repo.follow(pid);
+                
+                setIsSaveModalOpen(false);
+                setMsg("✅ Protocol created! Redirecting...");
+                
+                // Reconstruct the nested UI URL natively to keep them inside the sidebar shell
+                const targetUrl = parentNeedId 
+                    ? `/${parentNeedId}/${params.suiteId ? `suites/${params.suiteId}/` : ''}protocols/${pid}`
+                    : `/protocol/${pid}`;
+                
+                setTimeout(() => nav(targetUrl), 200);
             } else {
-                setMsg("✅ Successfully published!");
+                await publishProtocol(targetVersionType, targetStage, currentContent);
+                setIsSaveModalOpen(false);
+                if (onClose) {
+                    onClose();
+                } else {
+                    setMsg("✅ Successfully published!");
+                }
             }
         } catch (e: any) {
             setMsg("❌ " + e.message);
@@ -105,10 +139,17 @@ export default function ProtocolEditorProfile({
         <div className="mx-auto max-w-3xl p-6 space-y-4 animate-fade-in-up">
             <header className="flex items-start justify-between">
                 <div>
-                    <h1 className="text-2xl font-semibold">Edit Protocol</h1>
+                    <h1 className="text-2xl font-semibold">{isNew ? "Create Protocol" : "Edit Protocol"}</h1>
                     <div className="text-sm text-gray-500 mt-1">
-                        Editing version: <span className="font-mono">v{draft.version}</span>
-                        {latest && latest !== draft.version ? ` (latest is v${latest})` : ""}
+                        {isNew ? (
+                            <span className="flex items-center gap-2">
+                                <span className="font-semibold text-gray-700">Root Context:</span> 
+                                <span className="uppercase tracking-wider">{parentNeedId || "None"}</span>
+                            </span>
+                        ) : (
+                            <>Editing version: <span className="font-mono">v{draft.version}</span>
+                            {latest && latest !== draft.version ? ` (latest is v${latest})` : ""}</>
+                        )}
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -128,14 +169,14 @@ export default function ProtocolEditorProfile({
             </header>
 
             <label className="block" htmlFor="protocol-title">
-                <div className="text-sm font-medium text-gray-700">Title <span className="text-xs text-gray-400 font-normal ml-1">(Immutable via Lineage)</span></div>
+                <div className="text-sm font-medium text-gray-700">Title {isNew ? "" : <span className="text-xs text-gray-400 font-normal ml-1">(Immutable via Lineage)</span>}</div>
                 <input
                     id="protocol-title"
                     name="title"
-                    className="mt-1 w-full text-base rounded border border-gray-300 p-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-gray-50 text-gray-600 cursor-not-allowed"
+                    className={`mt-1 w-full text-base rounded border border-gray-300 p-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none ${!isNew ? "bg-gray-50 text-gray-600 cursor-not-allowed" : ""}`}
                     value={form.title}
                     onChange={(e) => setForm({ ...form, title: e.target.value })}
-                    disabled={true}
+                    disabled={!isNew}
                 />
             </label>
 
@@ -203,36 +244,43 @@ export default function ProtocolEditorProfile({
                     <div className="space-y-6 py-4">
                         <div className="space-y-3">
                             <label className="text-sm font-medium text-gray-900">What changed?</label>
-                            <div className="grid grid-cols-1 gap-2">
-                                <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition ${targetVersionType === 'patch' ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'}`}>
-                                    <input 
-                                        type="radio" 
-                                        name="versionType" 
-                                        value="patch"
-                                        checked={targetVersionType === 'patch'} 
-                                        onChange={() => setTargetVersionType('patch')}
-                                        className="h-4 w-4 text-blue-600" 
-                                    />
-                                    <span className="ml-3 block">
-                                        <span className="block text-sm font-medium">Small fix or cleanup (v{nextPatch})</span>
-                                        <span className="block text-xs text-gray-500">Typos, wording, or formatting—no change in meaning.</span>
-                                    </span>
-                                </label>
-                                <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition ${targetVersionType === 'minor' ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'}`}>
-                                    <input 
-                                        type="radio" 
-                                        name="versionType" 
-                                        value="minor"
-                                        checked={targetVersionType === 'minor'} 
-                                        onChange={() => setTargetVersionType('minor')}
-                                        className="h-4 w-4 text-blue-600" 
-                                    />
-                                    <span className="ml-3 block">
-                                        <span className="block text-sm font-medium">Improvement or clarification (v{nextMinor})</span>
-                                        <span className="block text-xs text-gray-500">Adds detail or improves the protocol without changing its direction.</span>
-                                    </span>
-                                </label>
-                            </div>
+                            {isNew ? (
+                                <div className="p-3 border rounded-lg border-blue-500 bg-blue-50 text-blue-900">
+                                    <span className="block text-sm font-medium">Initial Publish (v0.1.0)</span>
+                                    <span className="block text-xs text-blue-700/80 mt-1">This will create the very first draft version of this protocol.</span>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 gap-2">
+                                    <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition ${targetVersionType === 'patch' ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'}`}>
+                                        <input 
+                                            type="radio" 
+                                            name="versionType" 
+                                            value="patch"
+                                            checked={targetVersionType === 'patch'} 
+                                            onChange={() => setTargetVersionType('patch')}
+                                            className="h-4 w-4 text-blue-600" 
+                                        />
+                                        <span className="ml-3 block">
+                                            <span className="block text-sm font-medium">Small fix or cleanup (v{nextPatch})</span>
+                                            <span className="block text-xs text-gray-500">Typos, wording, or formatting—no change in meaning.</span>
+                                        </span>
+                                    </label>
+                                    <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition ${targetVersionType === 'minor' ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'}`}>
+                                        <input 
+                                            type="radio" 
+                                            name="versionType" 
+                                            value="minor"
+                                            checked={targetVersionType === 'minor'} 
+                                            onChange={() => setTargetVersionType('minor')}
+                                            className="h-4 w-4 text-blue-600" 
+                                        />
+                                        <span className="ml-3 block">
+                                            <span className="block text-sm font-medium">Improvement or clarification (v{nextMinor})</span>
+                                            <span className="block text-xs text-gray-500">Adds detail or improves the protocol without changing its direction.</span>
+                                        </span>
+                                    </label>
+                                </div>
+                            )}
                         </div>
 
                         <div className="space-y-3">
@@ -243,12 +291,14 @@ export default function ProtocolEditorProfile({
                                     className={`flex-1 py-1.5 text-sm font-medium rounded-md transition ${targetStage === 'draft' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                                 >Still Evolving</button>
                                 <button 
-                                    onClick={() => setTargetStage('candidate')}
-                                    className={`flex-1 py-1.5 text-sm font-medium rounded-md transition ${targetStage === 'candidate' ? 'bg-white shadow-sm text-amber-700' : 'text-gray-500 hover:text-gray-700'}`}
+                                    onClick={() => !isNew && setTargetStage('candidate')}
+                                    disabled={isNew}
+                                    className={`flex-1 py-1.5 text-sm font-medium rounded-md transition ${targetStage === 'candidate' ? 'bg-white shadow-sm text-amber-700' : 'text-gray-500 hover:text-gray-700'} ${isNew ? 'opacity-40 cursor-not-allowed' : ''}`}
                                 >Ready for Review</button>
                                 <button 
-                                    onClick={() => setTargetStage('stable')}
-                                    className={`flex-1 py-1.5 text-sm font-medium rounded-md transition ${targetStage === 'stable' ? 'bg-white shadow-sm text-green-700' : 'text-gray-500 hover:text-gray-700'}`}
+                                    onClick={() => !isNew && setTargetStage('stable')}
+                                    disabled={isNew}
+                                    className={`flex-1 py-1.5 text-sm font-medium rounded-md transition ${targetStage === 'stable' ? 'bg-white shadow-sm text-green-700' : 'text-gray-500 hover:text-gray-700'} ${isNew ? 'opacity-40 cursor-not-allowed' : ''}`}
                                 >Ready to Use</button>
                             </div>
                         </div>

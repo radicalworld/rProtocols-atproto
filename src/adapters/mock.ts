@@ -74,6 +74,35 @@ for (const p of Object.values(protocols)) {
     };
 }
 
+const LOCAL_STORAGE_KEY = "rp_mock_db";
+
+function saveToLocal() {
+    try {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
+            needs, suites, protocols, marks, protoRoots, protoVersionsByCid, slugToRootId, protocolReleases
+        }));
+    } catch(e) {}
+}
+
+function loadFromLocal() {
+    try {
+        const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (!raw) return false;
+        const db = JSON.parse(raw);
+        Object.keys(needs).forEach(k => delete needs[k]); Object.assign(needs, db.needs);
+        Object.keys(suites).forEach(k => delete suites[k]); Object.assign(suites, db.suites);
+        Object.keys(protocols).forEach(k => delete protocols[k]); Object.assign(protocols, db.protocols);
+        Object.keys(marks).forEach(k => delete marks[k]); Object.assign(marks, db.marks);
+        Object.keys(protoRoots).forEach(k => delete protoRoots[k]); Object.assign(protoRoots, db.protoRoots);
+        Object.keys(protoVersionsByCid).forEach(k => delete protoVersionsByCid[k]); Object.assign(protoVersionsByCid, db.protoVersionsByCid);
+        Object.keys(slugToRootId).forEach(k => delete slugToRootId[k]); Object.assign(slugToRootId, db.slugToRootId);
+        Object.keys(protocolReleases).forEach(k => delete protocolReleases[k]); Object.assign(protocolReleases, db.protocolReleases);
+        return true;
+    } catch(e) { return false; }
+}
+
+loadFromLocal();
+
 // No longer utilizing a static Section Registry.
 // Categories perfectly map 1:1 with Top-Level Root Needs.
 // ---------- helpers ----------
@@ -297,12 +326,30 @@ class MockAdapter implements RPRepository {
         if (parent) {
             parent.childLineageIds.push(id);
         }
+        
         return id;
     }
 
-    async createProtocol(payload: Pick<Protocol, "title" | "summary" | "body">): Promise<ProtocolId> {
+    async createProtocol(payload: Pick<Protocol, "title" | "summary" | "body" | "tags" | "language">): Promise<ProtocolId> {
         const id = payload.title.toLowerCase().replace(/\s+/g, "-");
-        protocols[id] = { id, lineageId: `rp_${id}`, slug: id, title: payload.title, summary: payload.summary, body: payload.body || "" };
+        protocols[id] = { id, lineageId: `rp_${id}`, slug: id, title: payload.title, summary: payload.summary, body: payload.body || "", tags: payload.tags, language: payload.language };
+        
+        // Seed the release bucket to 0.1.0 and register root mappings
+        if (typeof protocolReleases !== 'undefined') {
+            (protocolReleases as any)[id] = {
+                current: "0.1.0",
+                releases: {
+                    "0.1.0": {
+                        version: "0.1.0",
+                        stage: "draft",
+                        createdAt: new Date().toISOString(),
+                        tags: payload.tags,
+                        language: payload.language
+                    }
+                }
+            };
+        }
+        
         return id;
     }
 
@@ -400,6 +447,8 @@ class MockAdapter implements RPRepository {
                 if (patch.body !== undefined) release.protocolBody = patch.body;
                 if (patch.title !== undefined) release.title = patch.title;
                 if (patch.summary !== undefined) release.summary = patch.summary;
+                if (patch.tags !== undefined) release.tags = patch.tags;
+                if (patch.language !== undefined) release.language = patch.language;
             }
         }
 
@@ -437,4 +486,31 @@ class MockAdapter implements RPRepository {
 }
 
 // Singleton export
-export const mockRepo: RPReadPort & RPWritePort = new MockAdapter();
+const rawAdapter = new MockAdapter();
+
+// Intercept all write methods dynamically and force a local serialization so the array footprints survive Vite's reload cycles
+export const mockRepo: RPReadPort & RPWritePort = new Proxy(rawAdapter, {
+    get(target, prop, receiver) {
+        const origMethod = (target as any)[prop];
+        if (typeof origMethod === 'function') {
+            return function (...args: any[]) {
+                const res = origMethod.apply(target, args);
+                if (res instanceof Promise) {
+                    return res.then(val => {
+                        if (
+                            ["createNeed", "createProtocol", "linkProtocolServesNeed", "addProtocolToSuite", 
+                             "publishany", "updateNeedDraft", "updateProtocolDraft", "promoteany", 
+                             "promoteProtocolVersion", "promoteNeedVersion", "follow", "unfollow", 
+                             "adopt", "unadopt"].includes(prop.toString())
+                        ) {
+                            saveToLocal();
+                        }
+                        return val;
+                    });
+                }
+                return res;
+            };
+        }
+        return Reflect.get(target, prop, receiver);
+    }
+});

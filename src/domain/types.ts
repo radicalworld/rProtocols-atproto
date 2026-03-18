@@ -238,7 +238,9 @@ export interface Protocol {
   
   title: string;
   summary?: string;
-  body?: string;                      
+  body?: string;
+  tags?: string[];
+  language?: string;                      
 }
 
 export interface ProtocolRelease {

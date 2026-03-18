@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, Navigate } from "react-router-dom";
+import { useParams, Navigate, useMatch } from "react-router-dom";
 import { useRepo } from "@/domain/repo";
 import type { Protocol } from "@/domain/types";
 import { FollowEye } from "@/features/marks/FollowEye";
+import { useFollowed } from "@/features/marks/useFollowed";
 import { AdoptButton } from "@/features/marks/AdoptButton";
+import { useAdopted } from "@/features/marks/useAdopted";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { parseVersion } from "@/lib/version";
@@ -14,6 +16,7 @@ import { ProtocolVersionSwitcher } from "@/features/protocols/components/Protoco
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Pencil } from "lucide-react";
 import ProtocolEditorProfile from "@/features/protocols/components/ProtocolEditorProfile";
+import { useSession } from "@/features/auth/SessionProvider";
 
 export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } = {}) {
     const { id: paramId = "" } = useParams();
@@ -22,8 +25,13 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
     const location = useLocation();
     const isEditing = location.pathname.endsWith("/edit");
     const repo = useRepo();
+    const { session } = useSession();
     const [p, setP] = useState<Protocol | null>(null);
     const [notFound, setNotFound] = useState(false);
+    
+    // Wire up dynamic tracking overlays to combat stale static JSON caches
+    const { isFollowed } = useFollowed(p?.id ?? "");
+    const { adopted: isAdopted } = useAdopted(p?.id ?? "");
 
     const parsed = useMemo(() => {
         // support: /protocol/:slug , /protocol/:slug@v1.2.3 , /protocol/cid/<cid>
@@ -91,8 +99,14 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
     const purpose = release?.purpose ?? p.summary ?? "";
     const date = release?.date ?? "";
     const language = release?.language ?? "";
-    const followCount = release?.followCount ?? 0;
-    const adoptCount = release?.adoptCount ?? 0;
+    
+    // Dynamically guarantee 0-state overrides if the active session proves network signals exist
+    const baseFollow = release?.followCount ?? 0;
+    const followCount = isFollowed && baseFollow === 0 ? 1 : baseFollow;
+    
+    const baseAdopt = release?.adoptCount ?? 0;
+    const adoptCount = isAdopted && baseAdopt === 0 ? 1 : baseAdopt;
+
     const shortUrl = release?.shortUrl;
     const qrCode = release?.qrCode;
 
@@ -122,6 +136,7 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
                             <div className="flex items-start justify-between">
                             <h1 className="text-3xl font-bold tracking-tight text-gray-900">{p.title || release?.title}</h1>
                             <div className="flex items-center gap-2 shrink-0 mt-1">
+                                {session && (
                                 <Link
                                     to="edit"
                                     className="inline-flex items-center gap-1 rounded-xl border border-gray-200 px-2 py-1 text-xs text-gray-500 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-colors"
@@ -130,6 +145,7 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
                                     <Pencil className="h-3.5 w-3.5" />
                                     <span className="sr-only">Edit Protocol</span>
                                 </Link>
+                                )}
                                 <FollowEye subjectId={p.id} label="Follow protocol" />
                                 <AdoptButton subjectId={p.id} disabled={!canAdopt || versionString.startsWith("0.")} />
                             </div>
@@ -139,6 +155,11 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
                             <div className="flex items-center gap-2">
                                 <ProtocolBadge version={`v${versionString}`} stage="stable" />
                                 <ProtocolBadge version={uiStageDisplay} stage={uiStage === "stable" ? "stable" : uiStage as any} />
+                                {language && (
+                                    <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-600 border border-gray-200 uppercase tracking-widest">
+                                        {language}
+                                    </span>
+                                )}
                             </div>
                             {versions.length > 0 && (
                                 <ProtocolVersionSwitcher id={p.id} currentVersion={versionString} onChange={(v) => nav(`/protocols/${p.id}/versions/${v}`)} />

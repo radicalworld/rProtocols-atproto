@@ -14,11 +14,7 @@ import { SuiteProfile } from "@/features/suites/SuiteProfile";
 import { ProtocolProfile } from "@/features/protocols/components/ProtocolProfile";
 import ExploreProtocolsPage from "@/features/protocols/routes/ExploreProtocolsPage";
 import ProtocolVersionPage from "@/features/protocols/routes/ProtocolVersionPage";
-
-import { NeedProfile } from "@/features/needs/components/NeedProfile";                      // /needs/:rootId
-import NeedVersionProfile from "@/features/needs/components/NeedVersionProfile";            // /needs/:rootId/v/:version
-import NeedEditorProfile from "@/features/needs/components/NeedEditorProfile";             // /needs/:rootId/edit
-import NewNeedProfile from "@/features/needs/components/NewNeedProfile";                   // /needs/new
+import { NeedProfile, NeedVersionProfile, NeedEditorProfile } from "@/features/needs/components";
 import { SeedNetworkButton } from "@/features/dev/SeedNetworkButton";
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -104,7 +100,7 @@ export default function App() {
             <Route path="/protocols/:id/versions/:version" element={<ProtocolVersionPage />} />
 
             {/* Needs routes */}
-            <Route path="/needs/new" element={<NewNeedProfile />} />
+            <Route path="/needs/new" element={<NeedEditorProfile isNew={true} />} />
             <Route path="/needs/:rootId" element={<NeedProfile />} />
             <Route path="/needs/:rootId/v/:version" element={<NeedVersionProfile />} />
             <Route path="/needs/:rootId/edit" element={<NeedEditorProfile />} />

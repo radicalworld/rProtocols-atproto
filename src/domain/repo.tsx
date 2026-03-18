@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useMemo } from "react";
 import type { RPRepository } from "./ports";
-import type { SectionId } from "./types";
+import type { SectionId, Need, Protocol } from "./types";
 import { mockRepo } from "@/adapters/mock";
 import { useSession } from "@/features/auth/SessionProvider";
 import { AtpAgent } from "@atproto/api";
@@ -115,6 +115,24 @@ export function RepoProvider({ children, repo }: { children: React.ReactNode; re
             hybrid.unfollow = at.unfollow.bind(at);
             hybrid.adopt = at.adopt?.bind(at) ?? (() => Promise.resolve());
             hybrid.unadopt = at.unadopt?.bind(at) ?? (() => Promise.resolve());
+
+            // Global Asset Creation -> PDS & Local Cache
+            hybrid.createNeed = async (payload: Pick<Need, "title" | "description" | "parentLineageId">) => {
+                const id = await mockRepo.createNeed(payload);
+                await (at as any).createNeed(payload, id);
+                return id;
+            };
+            
+            hybrid.createProtocol = async (payload: Pick<Protocol, "title" | "summary" | "body" | "tags" | "language">) => {
+                const id = await mockRepo.createProtocol(payload);
+                await (at as any).createProtocol(payload, id);
+                return id;
+            };
+
+            hybrid.linkProtocolServesNeed = async (pid: string, nid: string) => {
+                await mockRepo.linkProtocolServesNeed(pid, nid);
+                await (at as any).linkProtocolServesNeed(pid, nid);
+            };
 
             // Need Editor Mutations -> PDS & Local Cache
             hybrid.updateNeedDraft = async (rootId: string, version: string, patch: any) => {

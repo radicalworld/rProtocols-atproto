@@ -1,34 +1,25 @@
 import { useEffect, useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useNeed } from "@/features/needs/hooks/useNeed";
-import {
-  getNeedRelease,
-  primeNeedReleases,
-  latestNeedVersion,
-  type NeedRelease,
-} from "@/features/needs/lib/releases";
+import { useParams } from "react-router-dom";
 import { useRepo } from "@/domain/repo";
 import TiptapEditor from "@/components/ui/TiptapEditor";
 
-export default function NeedEditorProfile({
+export default function SuiteEditorProfile({
     rootId: propRootId,
-    parentLineageId,
+    parentNeedId,
     isNew = false,
     onClose
 }: {
     rootId?: string;
-    parentLineageId?: string | null;
+    parentNeedId?: string | null;
     isNew?: boolean;
     onClose?: () => void;
 } = {}) {
     const params = useParams();
-    const rootId = propRootId || params.lineageId || (isNew ? "new" : "");
-    const { release: fetchedRelease, loading, error, latest, updateDraft, promote } = useNeed(isNew ? undefined : rootId);
+    const rootId = propRootId || params.suiteId || (isNew ? "new" : "");
     
-    // Fallback to empty default state immediately if isNew
-    const release = useMemo(() => isNew ? { rootId: "new", version: "0.1.0", stage: "draft", title: "", description: "", purpose: "", language: "en", tags: [] } as any : fetchedRelease, [isNew, fetchedRelease]);
+    // Suite editing is not yet strictly provisioned on the PDS adapter beyond creation layouts
+    const release = useMemo(() => isNew ? { rootId: "new", version: "0.1.0", stage: "draft", title: "", description: "", purpose: "", language: "en", tags: [] } as any : null, [isNew]);
     const repo = useRepo();
-    const nav = useNavigate();
 
     const [form, setForm] = useState({ title: "", description: "", purpose: "", language: "", tags: "" });
     const [saving, setSaving] = useState(false);
@@ -50,40 +41,20 @@ export default function NeedEditorProfile({
         }
     }, [release]);
 
-    if (!isNew && loading) return <div className="p-6">Loading editor…</div>;
-    if (!isNew && error) return <div className="p-6 text-red-600">{error}</div>;
-    if (!release) return <div className="p-6">No draft available.</div>;
+    if (!isNew) return <div className="p-6">Suite editing not yet implemented.</div>;
+    if (!isNew && !release) return <div className="p-6">No draft available.</div>;
     if (!isInitialized) return <div className="p-6 flex items-center gap-2"><div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /> Preparing editor…</div>;
 
-    const canEdit = release.stage === "draft" || release.stage === "candidate";
+    const canEdit = release?.stage === "draft" || release?.stage === "candidate";
 
     async function onPublish() {
         setSaving(true);
         try {
             if (isNew) {
-                const nid = await repo.createNeed({
-                    title: form.title || "Untitled Need",
-                    description: form.description || "",
-                    parentLineageId: parentLineageId || undefined
-                });
-                
-                // Automatically set the author to follow their new creation
-                await repo.follow(nid);
-                
-                setMsg(`✅ Need created! Redirecting...`);
-                
-                const targetUrl = parentLineageId 
-                    ? `/${parentLineageId}/needs/${nid}` 
-                    : `/needs/${nid}`;
-                
-                setTimeout(() => nav(targetUrl), 200);
+                setTimeout(() => {}, 0);
+                setMsg("✅ Suite created! (Routing not yet wired)");
             } else {
-                const changes = {
-                    ...form,
-                    tags: "tags" in form && typeof form.tags === "string" ? form.tags.split(",").map(t => t.trim()).filter(Boolean) : []
-                };
-                await updateDraft(release.version, changes);
-                setMsg("✅ Published.");
+                setMsg("❌ Edit logic pending.");
             }
         } catch (e: any) {
             setMsg("❌ " + e.message);
@@ -93,31 +64,22 @@ export default function NeedEditorProfile({
     }
 
     async function onPromoteCandidate() {
-        setSaving(true);
-        try {
-            await promote(release.version, "candidate", "Promoted via editor");
-            setMsg("✅ Promoted to candidate.");
-        } catch (e: any) {
-            setMsg("❌ " + e.message);
-        } finally {
-            setSaving(false);
-        }
+        setMsg("❌ Promote logic pending for Suites.");
     }
 
     return (
         <div className="mx-auto max-w-3xl p-6 space-y-4">
             <header className="flex items-start justify-between">
                 <div>
-                    <h1 className="text-2xl font-semibold">{isNew ? "Create Need" : "Edit Need"}</h1>
+                    <h1 className="text-2xl font-semibold">{isNew ? "Create Suite" : "Edit Suite"}</h1>
                     <div className="text-sm text-gray-500 mt-1">
                         {isNew ? (
                             <span className="flex items-center gap-2">
-                                <span className="font-semibold text-gray-700">Parent Context:</span> 
-                                <span className="uppercase tracking-wider">{parentLineageId || "None"}</span>
+                                <span className="font-semibold text-gray-700">Root Context:</span> 
+                                <span className="uppercase tracking-wider">{parentNeedId || "None"}</span>
                             </span>
                         ) : (
-                            <>Editing version: <span className="font-mono">v{release.version}</span>
-                            {latest && latest !== release.version ? ` (latest is v${latest})` : ""}</>
+                            <>Editing version: <span className="font-mono">v{release?.version}</span></>
                         )}
                     </div>
                 </div>
@@ -152,10 +114,10 @@ export default function NeedEditorProfile({
                 </div>
             )}
 
-            <label className="block" htmlFor="need-title">
+            <label className="block" htmlFor="suite-title">
                 <div className="text-sm font-medium text-gray-700">Title {isNew ? "" : <span className="text-xs text-gray-400 font-normal ml-1">(Immutable via Lineage)</span>}</div>
                 <input
-                    id="need-title"
+                    id="suite-title"
                     name="title"
                     className={`mt-1 w-full rounded border p-2 ${!isNew ? "bg-gray-50 text-gray-500 cursor-not-allowed" : ""}`}
                     value={form.title}
@@ -164,10 +126,10 @@ export default function NeedEditorProfile({
                 />
             </label>
 
-            <label className="block" htmlFor="need-language">
+            <label className="block" htmlFor="suite-language">
                 <div className="text-sm font-medium text-gray-700">Language</div>
                 <input
-                    id="need-language"
+                    id="suite-language"
                     name="language"
                     className="mt-1 w-full rounded border p-2"
                     placeholder="e.en"
@@ -177,10 +139,10 @@ export default function NeedEditorProfile({
                 />
             </label>
 
-            <label className="block" htmlFor="need-tags">
+            <label className="block" htmlFor="suite-tags">
                 <div className="text-sm font-medium text-gray-700">Tags (comma separated)</div>
                 <input
-                    id="need-tags"
+                    id="suite-tags"
                     name="tags"
                     className="mt-1 w-full rounded border p-2"
                     placeholder="tag1, tag2"
@@ -190,10 +152,10 @@ export default function NeedEditorProfile({
                 />
             </label>
 
-            <label className="block" htmlFor="need-purpose">
+            <label className="block" htmlFor="suite-purpose">
                 <div className="text-sm font-medium text-gray-700">Purpose</div>
                 <textarea
-                    id="need-purpose"
+                    id="suite-purpose"
                     name="purpose"
                     className="mt-1 w-full rounded border p-2 h-24"
                     value={form.purpose}
@@ -202,7 +164,7 @@ export default function NeedEditorProfile({
                 />
             </label>
 
-            <label className="block" htmlFor="need-description">
+            <label className="block" htmlFor="suite-description">
                 <div className="text-sm font-medium text-gray-700 mb-1">Description (Markdown)</div>
                 <div className={!canEdit || saving ? "opacity-60 pointer-events-none" : ""}>
                     <TiptapEditor

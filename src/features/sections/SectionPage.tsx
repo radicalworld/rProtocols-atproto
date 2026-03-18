@@ -1,17 +1,27 @@
 import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { useRepo } from "@/domain/repo";
+import { useSession } from "@/features/auth/SessionProvider";
 import type { SectionId, Need, Suite, Protocol } from "@/domain/types";
 import { Routes, Route, useNavigate, useLocation, useParams, Link, Outlet } from "react-router-dom";
 import { ProtocolProfile } from "@/features/protocols/components/ProtocolProfile";
 import { SuiteProfile } from "@/features/suites/SuiteProfile";
 import { NeedProfile } from "@/features/needs/components/NeedProfile";
+import ProtocolEditorProfile from "@/features/protocols/components/ProtocolEditorProfile";
+import NeedEditorProfile from "@/features/needs/components/NeedEditorProfile";
+import SuiteEditorProfile from "@/features/suites/SuiteEditorProfile";
 
 export function SectionPage({ section }: { section: SectionId }) {
     return (
         <Routes>
             <Route element={<LayoutShell section={section} />}>
                 <Route index element={<SectionIndex section={section} />} />
+                
+                {/* Creation Endpoints */}
+                <Route path="suites/new" element={<SuiteEditorProfile isNew={true} parentNeedId={section} />} />
+                <Route path="protocols/new" element={<ProtocolEditorProfile isNew={true} parentNeedId={section} />} />
+                <Route path="needs/new" element={<NeedEditorProfile isNew={true} parentLineageId={section} />} />
+                <Route path="suites/:suiteId/protocols/new" element={<ProtocolEditorProfile isNew={true} parentNeedId={section} />} />
                 <Route path="suites/:suiteId" element={<SuiteDetailWrapper />} />
                 <Route path="suites/:suiteId/protocols" element={<ProtocolSelectPrompt />} />
                 <Route path="suites/:suiteId/protocols/:protocolId/*" element={<ProtocolDetailWrapper />} />
@@ -70,6 +80,7 @@ function CountBubble({ count }: { count: number }) {
 function ContextSidebar({ section, suiteId, protocolId, needId }: { section: SectionId, suiteId: string | null, protocolId: string | null, needId: string | null }) {
     const repo = useRepo();
     const nav = useNavigate();
+    const { session } = useSession();
     const [suites, setSuites] = useState<Suite[]>([]);
     const [protocols, setProtocols] = useState<Protocol[]>([]);
     const [subNeeds, setSubNeeds] = useState<Need[]>([]);
@@ -82,6 +93,7 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
             
             const allSuites: Suite[] = [];
             const allSubNeeds: Need[] = [];
+            const allProtocols: Protocol[] = [];
             
             for (const n of rootNeeds) {
                 // Fetch Suites
@@ -93,13 +105,18 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
                     const child = await repo.getNeedByLineageId(childId);
                     if (child) allSubNeeds.push(child);
                 }
+                
+                // Fetch Protocols mapped directly to the Root Need
+                if (repo.getProtocolsForNeed) {
+                    const needProtos = await repo.getProtocolsForNeed(n.lineageId);
+                    allProtocols.push(...needProtos);
+                }
             }
             
             // Deduplicate suites
             const uniqueSuites = Array.from(new Map(allSuites.map(s => [s.lineageId, s])).values());
             
-            // Fetch Protocols
-            const allProtocols: Protocol[] = [];
+            // Fetch Protocols grouped inside Suites (and merge them into our list)
             for (const s of uniqueSuites) {
                 const suiteProtos = await repo.getSuiteProtocols(s.lineageId);
                 allProtocols.push(...suiteProtos);
@@ -118,7 +135,7 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
             }
         })();
         return () => { mounted = false; };
-    }, [repo, section]);
+    }, [repo, section, suiteId, protocolId, needId]);
 
     // Tailwind details styles for accordions
     const detailsSummaryClass = "px-5 py-3 text-[11px] font-semibold text-gray-500 hover:text-gray-900 uppercase tracking-wider cursor-pointer transition-colors select-none group-open:mb-2 focus:outline-none list-none [&::-webkit-details-marker]:hidden flex items-center justify-between";
@@ -142,6 +159,7 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
                             <svg className="w-3.5 h-3.5 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                             Suites <CountBubble count={suites.length} />
                         </span>
+                        {session && (
                         <button 
                             onClick={(e) => { e.preventDefault(); nav(`/${section}/suites/new`); }}
                             className="p-1 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-900 transition-colors"
@@ -149,8 +167,14 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
                         >
                             <Plus className="w-3.5 h-3.5" />
                         </button>
+                        )}
                     </summary>
                     <div className="px-3 pb-2 space-y-1">
+                        {suiteId === "new" && (
+                            <div className="block pl-6 pr-3 py-2.5 rounded-lg text-sm transition-colors bg-white text-blue-700 font-medium shadow-sm border border-gray-100">
+                                New Suite...
+                            </div>
+                        )}
                         {suites.length > 0 ? suites.map(s => {
                             const sId = s.lineageId;
                             const isActive = suiteId === sId && !protocolId;
@@ -176,6 +200,7 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
                             <svg className="w-3.5 h-3.5 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                             Protocols <CountBubble count={protocols.length} />
                         </span>
+                        {session && (
                         <button 
                             onClick={(e) => { e.preventDefault(); nav(`/${section}/protocols/new`); }}
                             className="p-1 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-900 transition-colors"
@@ -183,8 +208,14 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
                         >
                             <Plus className="w-3.5 h-3.5" />
                         </button>
+                        )}
                     </summary>
                     <div className="px-3 pb-2 space-y-1">
+                        {protocolId === "new" && (
+                            <div className="block pl-6 pr-3 py-2.5 rounded-lg text-sm transition-colors bg-white text-blue-700 font-medium shadow-sm border border-gray-100">
+                                New Protocol...
+                            </div>
+                        )}
                         {protocols.length > 0 ? protocols.map(p => {
                             const slug = encodeURIComponent(p.id);
                             const isActive = protocolId === slug;
@@ -212,6 +243,7 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
                             <svg className="w-3.5 h-3.5 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                             Sub-Needs <CountBubble count={subNeeds.length} />
                         </span>
+                        {session && (
                         <button 
                             onClick={(e) => { e.preventDefault(); nav(`/${section}/needs/new`); }}
                             className="p-1 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-900 transition-colors"
@@ -219,8 +251,14 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
                         >
                             <Plus className="w-3.5 h-3.5" />
                         </button>
+                        )}
                     </summary>
                     <div className="px-3 pb-2 space-y-1">
+                        {needId === "new" && (
+                            <div className="block pl-6 pr-3 py-2.5 rounded-lg text-sm transition-colors bg-white text-blue-700 font-medium shadow-sm border border-gray-100">
+                                New Sub-Need...
+                            </div>
+                        )}
                         {subNeeds.length > 0 ? subNeeds.map(n => {
                             const isActive = needId === n.lineageId;
                             return (
