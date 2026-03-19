@@ -31,6 +31,7 @@ export const suites: Record<string, Suite> = {
         id: "suite-root-protocols", lineageId: "rp_suite-root-protocols", slug: "suite-root-protocols",
         title: "Collaborative Protocols",
         language: "en",
+        tags: ["collaboration", "architecture", "patterns"],
         description: "Foundational patterns for creating, evolving, and sharing.",
         includeProtocols: [{ lineageId: "protocol-creation" }, { lineageId: "protocol-evolution" }, { lineageId: "protocol-attribution" }, { lineageId: "protocol-adoption" }, { lineageId: "protocol-follow" }, { lineageId: "protocol-trust" }, { lineageId: "protocol-publishing" }, { lineageId: "protocol-index" }]
     },

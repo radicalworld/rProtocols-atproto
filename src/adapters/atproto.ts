@@ -187,6 +187,11 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
         return Promise.resolve();
     }
     
+    async linkSuiteServesNeed(sid: string, nid: string): Promise<void> {
+        // PDS linking logic is natively mapped recursively inside Suite DAG-CBOR payloads explicitly.
+        return Promise.resolve();
+    }
+    
     async addProtocolToSuite(): Promise<any> { throw new Error("Method not implemented."); }
 
     // ---------- Needs write operations (Publishing) ----------
@@ -331,6 +336,49 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
     }
 
     // ---------- Suite write operations (Publishing) ----------
+    async createSuite(payload: any, forceId?: string): Promise<string> {
+        if (!this.viewerDid) throw new Error("Not logged in");
+        
+        const rootId = forceId ? `rp_st_${forceId}` : `rp_st_${Math.random().toString(36).slice(2, 10)}`;
+        const rkey = `rpv${Math.random().toString(36).slice(2, 7)}`;
+        
+        try {
+            await this.agent.com.atproto.repo.putRecord({
+                repo: this.viewerDid,
+                collection: "org.rp.suite",
+                rkey: rkey,
+                record: {
+                    $type: "org.rp.suite",
+                    lineage: {
+                        id: rootId,
+                        root: { uri: `at://${this.viewerDid}/org.rp.suite/${rootId}`, cid: "mock" }
+                    },
+                    slug: rootId,
+                    version: "0.1.0",
+                    stage: "draft",
+                    createdAt: new Date().toISOString(),
+                    language: payload.language ?? "en",
+                    authorship: {
+                        authorDid: this.viewerDid
+                    },
+                    title: payload.title ?? "Draft Suite",
+                    description: payload.purpose ?? "",
+                    purpose: payload.purpose ?? "",
+                    members: {
+                        needs: payload.parentNeedLineageId ? [{ uri: `at://${this.viewerDid}/org.rp.need/${payload.parentNeedLineageId}`, cid: "mock" }] : [],
+                        protocols: payload.includeProtocols?.map((p: any) => ({ uri: `at://${this.viewerDid}/org.rp.protocol/${p.lineageId || p.uri || ""}`, cid: "mock" })) || []
+                    },
+                    tags: payload.tags ?? []
+                }
+            });
+            console.log(`PDS: Successfully broadcasted org.rp.suite root to PDS under rkey: ${rkey}`);
+            return rootId;
+        } catch (e: any) {
+            console.error("PDS Save Error (Suite Root):", e);
+            throw e;
+        }
+    }
+
     async updateSuiteDraft(rootId: string, version: string, patch: any): Promise<void> {
         if (!this.viewerDid) return;
 
@@ -357,10 +405,11 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
                         authorDid: this.viewerDid
                     },
                     title: patch.title ?? "Draft Suite",
-                    description: patch.description ?? patch.summary ?? "",
-                    purpose: patch.purpose ?? "",
+                    description: patch.description ?? patch.summary ?? patch.purpose ?? "",
+                    purpose: patch.purpose ?? patch.description ?? "",
                     members: {
-                        protocols: patch.includeProtocols?.map((p: any) => ({ uri: p.lineageId || p.uri || "", cid: dummyCid })) || []
+                        needs: patch.parentNeedLineageId ? [{ uri: `at://${this.viewerDid}/org.rp.need/${patch.parentNeedLineageId}`, cid: dummyCid }] : [],
+                        protocols: patch.includeProtocols?.map((p: any) => ({ uri: `at://${this.viewerDid}/org.rp.protocol/${p.lineageId || p.uri || ""}`, cid: dummyCid })) || []
                     },
                     tags: patch.tags ?? []
                 }

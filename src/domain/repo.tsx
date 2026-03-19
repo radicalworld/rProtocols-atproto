@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useMemo } from "react";
 import type { RPRepository } from "./ports";
-import type { SectionId, Need, Protocol } from "./types";
+import type { SectionId, Need, Protocol, Suite } from "./types";
 import { mockRepo } from "@/adapters/mock";
 import { useSession } from "@/features/auth/SessionProvider";
 import { AtpAgent } from "@atproto/api";
@@ -117,7 +117,7 @@ export function RepoProvider({ children, repo }: { children: React.ReactNode; re
             hybrid.unadopt = at.unadopt?.bind(at) ?? (() => Promise.resolve());
 
             // Global Asset Creation -> PDS & Local Cache
-            hybrid.createNeed = async (payload: Pick<Need, "title" | "description" | "parentLineageId">) => {
+            hybrid.createNeed = async (payload: Pick<Need, "title" | "description" | "parentLineageId" | "purpose" | "language" | "tags">) => {
                 const id = await mockRepo.createNeed(payload);
                 await (at as any).createNeed(payload, id);
                 return id;
@@ -129,37 +129,62 @@ export function RepoProvider({ children, repo }: { children: React.ReactNode; re
                 return id;
             };
 
+            hybrid.createSuite = async (payload: Pick<Suite, "title" | "purpose" | "tags" | "language" | "includeProtocols"> & { parentNeedLineageId?: string }) => {
+                const id = await mockRepo.createSuite(payload);
+                if ((at as any).createSuite) {
+                    try { await (at as any).createSuite(payload, id); } 
+                    catch (e) { console.warn("PDS Warning: Failed to sync Suite creation natively.", e); }
+                }
+                return id;
+            };
+
             hybrid.linkProtocolServesNeed = async (pid: string, nid: string) => {
                 await mockRepo.linkProtocolServesNeed(pid, nid);
-                await (at as any).linkProtocolServesNeed(pid, nid);
+                if ((at as any).linkProtocolServesNeed) {
+                    try { await (at as any).linkProtocolServesNeed(pid, nid); } catch (e) { console.warn("PDS Warning:", e); }
+                }
             };
 
-            // Need Editor Mutations -> PDS & Local Cache
+            // Need Editor Mutations -> Native Mock Priority & Safe PDS Hook
             hybrid.updateNeedDraft = async (rootId: string, version: string, patch: any) => {
-                await at.updateNeedDraft(rootId, version, patch);
                 await mockRepo.updateNeedDraft(rootId, version, patch);
+                if (at.updateNeedDraft) {
+                    try { await at.updateNeedDraft(rootId, version, patch); } catch (e) { console.warn("PDS Warning:", e); }
+                }
             };
             hybrid.promoteNeedVersion = async (rootId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string) => {
-                await at.promoteNeedVersion(rootId, version, toStage, changeDescription);
                 await mockRepo.promoteNeedVersion(rootId, version, toStage, changeDescription);
+                if (at.promoteNeedVersion) {
+                    try { await at.promoteNeedVersion(rootId, version, toStage, changeDescription); } catch (e) { console.warn("PDS Warning:", e); }
+                }
             };
 
-            // Protocol Editor Mutations -> PDS & Local Cache
-            hybrid.updateProtocolDraft = async (rootId: string, version: string, patch: any) => {
-                await at.updateProtocolDraft(rootId, version, patch);
-                await (mockRepo as any).updateProtocolDraft?.(rootId, version, patch);
-            };
-            hybrid.promoteProtocolVersion = async (rootId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string) => {
-                await at.promoteProtocolVersion(rootId, version, toStage, changeDescription);
-                await (mockRepo as any).promoteProtocolVersion?.(rootId, version, toStage, changeDescription);
-            };
-
-            // Suite Editor Mutations -> PDS Cache
+            // Suite Editor Mutations -> Native Mock Priority & Safe PDS Hook
             hybrid.updateSuiteDraft = async (rootId: string, version: string, patch: any) => {
-                await (at as any).updateSuiteDraft?.(rootId, version, patch);
+                if ((mockRepo as any).updateSuiteDraft) await (mockRepo as any).updateSuiteDraft(rootId, version, patch);
+                if ((at as any).updateSuiteDraft) {
+                    try { await (at as any).updateSuiteDraft(rootId, version, patch); } catch (e) { console.warn("PDS Warning:", e); }
+                }
             };
             hybrid.promoteSuiteVersion = async (rootId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string) => {
-                await (at as any).promoteSuiteVersion?.(rootId, version, toStage, changeDescription);
+                if ((mockRepo as any).promoteSuiteVersion) await (mockRepo as any).promoteSuiteVersion(rootId, version, toStage, changeDescription);
+                if ((at as any).promoteSuiteVersion) {
+                    try { await (at as any).promoteSuiteVersion(rootId, version, toStage, changeDescription); } catch (e) { console.warn("PDS Warning:", e); }
+                }
+            };
+
+            // Protocol Editor Mutations -> Native Mock Priority & Safe PDS Hook
+            hybrid.updateProtocolDraft = async (rootId: string, version: string, patch: any) => {
+                if ((mockRepo as any).updateProtocolDraft) await (mockRepo as any).updateProtocolDraft(rootId, version, patch);
+                if (at.updateProtocolDraft) {
+                    try { await at.updateProtocolDraft(rootId, version, patch); } catch (e) { console.warn("PDS Warning:", e); }
+                }
+            };
+            hybrid.promoteProtocolVersion = async (rootId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string) => {
+                if ((mockRepo as any).promoteProtocolVersion) await (mockRepo as any).promoteProtocolVersion(rootId, version, toStage, changeDescription);
+                if (at.promoteProtocolVersion) {
+                    try { await at.promoteProtocolVersion(rootId, version, toStage, changeDescription); } catch (e) { console.warn("PDS Warning:", e); }
+                }
             };
 
             return hybrid as RPRepository;

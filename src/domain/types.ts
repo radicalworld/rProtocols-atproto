@@ -214,6 +214,7 @@ export interface Suite {
   id: string;
   lineageId: SuiteId;
   slug: string;
+  version?: string;
   
   title: string;
   description?: string;
@@ -229,6 +230,7 @@ export interface Suite {
   qrCode?: string;
   followEnabled?: boolean;               
   followCount?: number;
+  adoptCount?: number;
 }
 
 export interface Protocol {

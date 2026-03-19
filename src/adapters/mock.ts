@@ -37,6 +37,8 @@ const protoRoots: Record<string, any> = {};
 const protoVersionsByCid: Record<string, any> = {};
 const slugToRootId: Record<string, string> = {};
 
+export const suiteReleases: Record<string, any> = {};
+
 function canonicalize(obj: unknown) {
     // deterministic stringify (keys sorted shallowly — good enough for mock)
     return JSON.stringify(obj, Object.keys(obj as any).sort());
@@ -79,7 +81,7 @@ const LOCAL_STORAGE_KEY = "rp_mock_db";
 function saveToLocal() {
     try {
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
-            needs, suites, protocols, marks, protoRoots, protoVersionsByCid, slugToRootId, protocolReleases
+            needs, suites, protocols, marks, protoRoots, protoVersionsByCid, slugToRootId, protocolReleases, suiteReleases
         }));
     } catch(e) {}
 }
@@ -97,6 +99,9 @@ function loadFromLocal() {
         Object.keys(protoVersionsByCid).forEach(k => delete protoVersionsByCid[k]); Object.assign(protoVersionsByCid, db.protoVersionsByCid);
         Object.keys(slugToRootId).forEach(k => delete slugToRootId[k]); Object.assign(slugToRootId, db.slugToRootId);
         Object.keys(protocolReleases).forEach(k => delete protocolReleases[k]); Object.assign(protocolReleases, db.protocolReleases);
+        if (db.suiteReleases) {
+            Object.keys(suiteReleases).forEach(k => delete suiteReleases[k]); Object.assign(suiteReleases, db.suiteReleases);
+        }
         return true;
     } catch(e) { return false; }
 }
@@ -208,7 +213,9 @@ class MockAdapter implements RPRepository {
 
     async getSuite(id: SuiteId) {
         const s = this.findSuite(id);
-        return s ? clone(s) : null;
+        if (!s) return null;
+
+        return clone(s);
     }
 
     async listSections() {
@@ -254,7 +261,8 @@ class MockAdapter implements RPRepository {
 
     async getSuiteProtocols(suiteId: SuiteId): Promise<Protocol[]> {
         const s = this.findSuite(suiteId);
-        return clone((s?.includeProtocols ?? []).map((p) => this.findProtocol(p.lineageId)).filter(Boolean) as Protocol[]);
+        if (!s || !s.includeProtocols) return [];
+        return clone(s.includeProtocols.map((p: any) => this.findProtocol(p.lineageId || p.id)).filter(Boolean) as Protocol[]);
     }
 
     async getMarks(verb: MarkVerb): Promise<Mark[]> {
@@ -330,6 +338,36 @@ class MockAdapter implements RPRepository {
         return id;
     }
 
+    async createSuite(payload: Pick<Suite, "title" | "purpose" | "tags" | "language" | "includeProtocols"> & { parentNeedLineageId?: string }, forceId?: string): Promise<string> {
+        const id = forceId || payload.title.toLowerCase().replace(/\s+/g, "-");
+        suites[id] = {
+            id,
+            lineageId: `rp_st_${id}`,
+            slug: id,
+            title: payload.title,
+            tags: payload.tags || [],
+            language: payload.language || "en",
+            purpose: payload.purpose || "",
+            includeProtocols: payload.includeProtocols || []
+        };
+        
+        if (payload.parentNeedLineageId) {
+            await this.linkSuiteServesNeed(id, payload.parentNeedLineageId);
+        }
+        
+        saveToLocal();
+        return id;
+    }
+
+    async linkSuiteServesNeed(suiteId: SuiteId, needId: NeedId): Promise<void> {
+        if (!needs[needId] || !suites[suiteId]) return;
+        const n = needs[needId];
+        const sLineage = suites[suiteId].lineageId;
+        if (!n.suiteLineageIds) n.suiteLineageIds = [];
+        if (!n.suiteLineageIds.includes(sLineage)) n.suiteLineageIds.push(sLineage);
+        saveToLocal();
+    }
+
     async createProtocol(payload: Pick<Protocol, "title" | "summary" | "body" | "tags" | "language">): Promise<ProtocolId> {
         const id = payload.title.toLowerCase().replace(/\s+/g, "-");
         protocols[id] = { id, lineageId: `rp_${id}`, slug: id, title: payload.title, summary: payload.summary, body: payload.body || "", tags: payload.tags, language: payload.language };
@@ -395,7 +433,48 @@ class MockAdapter implements RPRepository {
 
         return clone(next);
     }
-    
+
+    // --- Suite Editing (Mocks) ---
+    async updateSuiteDraft(lineageId: string, version: string, patch: any): Promise<void> {
+        const suite = this.findSuite(lineageId) || suites[lineageId];
+        if (!suite) {
+            console.warn("Suite not found in mock store, skipping local update:", lineageId);
+            return;
+        }
+
+        // 1. Enforce ATProto Append-Only Spec: Never overwrite existing version blocks.
+        if (!suiteReleases[lineageId]) {
+            suiteReleases[lineageId] = { current: "0.1.0", releases: {} };
+        }
+        const bucket = suiteReleases[lineageId];
+        if (!bucket.releases[bucket.current]) bucket.releases[bucket.current] = clone(suite);
+        
+        // Append new structural leaf node
+        const source = bucket.releases[bucket.current];
+        bucket.releases[version] = {
+            ...source,
+            ...patch,
+            version: version,
+            stage: "draft",
+            createdAt: new Date().toISOString()
+        };
+        bucket.current = version;
+        
+        console.log(`[ATProto DAG-CBOR] Appended immutable Suite Draft leaf node: ${lineageId}@${version}`);
+
+        // 2. Reflect latest state backward for generic UI fetching
+        if (patch.title !== undefined) suite.title = patch.title;
+        if (patch.purpose !== undefined || patch.description !== undefined) {
+            suite.purpose = patch.purpose ?? patch.description;
+            suite.description = patch.description ?? patch.purpose;
+        }
+        if (patch.tags !== undefined) suite.tags = patch.tags;
+        if (patch.language !== undefined) suite.language = patch.language;
+        if (patch.includeProtocols !== undefined) suite.includeProtocols = patch.includeProtocols;
+        
+        saveToLocal();
+    }
+
     // --- Need Editing (Mocks) ---
     async updateNeedDraft(lineageId: string, version: string, patch: any): Promise<void> {
         const root = this.findNeed(lineageId) || needs[lineageId];

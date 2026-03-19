@@ -28,7 +28,7 @@ export default function SignupForm({ onDone }: { onDone?: (info: DoneInfo) => vo
     const rawDomains = cfg?.availableUserDomains ?? ["r.radical.world"];
     const domainValues = rawDomains.map(d => d.replace(/^\.+/, "")); // strip leading "."
     const selectedDomain = (domain ?? domainValues[0])!;
-    const { signIn } = useSession();
+    const { signIn, session } = useSession();
 
     const handle = useMemo(() => {
     const lp = (localPart || "")
@@ -149,10 +149,10 @@ export default function SignupForm({ onDone }: { onDone?: (info: DoneInfo) => vo
         setStage("finalizing");
 
         // sign in to get access/refresh + update global session UI
-        const session = await signIn(email.trim(), password);
+        const signInResult = await signIn(email.trim(), password);
 
         // use the fresh access token to finalize the handle
-        await updateHandle(session.accessJwt, `${lp}.${dom}`);
+        await updateHandle((signInResult as any)?.accessJwt || (session as any)?.accessJwt, `${lp}.${dom}`);
         
         // const access = await login(email.trim()); // login by email is safest
         // await updateHandle(access, `${lp}.${dom}`);
@@ -178,8 +178,8 @@ export default function SignupForm({ onDone }: { onDone?: (info: DoneInfo) => vo
         setStage("finalizing");
         try {
             // sign in so the header updates and we get accessJwt
-            const session = await signIn(email.trim(), password);
-            await updateHandle(session.accessJwt, requestedHandle);
+            const signInResult = await signIn(email.trim(), password);
+            await updateHandle((signInResult as any)?.accessJwt || (session as any)?.accessJwt, requestedHandle);
             
             // const access = await login(email.trim());
             // await updateHandle(access, requestedHandle);
@@ -282,7 +282,7 @@ export default function SignupForm({ onDone }: { onDone?: (info: DoneInfo) => vo
             It must serve <code>/.well-known/atproto-did</code> with <code>{did}</code>.
           </div>
           <div className="flex gap-2">
-            <Button onClick={onIAddedCaddy} disabled={stage === "finalizing"}>
+            <Button onClick={onIAddedCaddy} disabled={stage === ("finalizing" as any)}>
               I added it — finalize handle
             </Button>
             <Button

@@ -12,17 +12,68 @@ import NeedEditorProfile from "@/features/needs/components/NeedEditorProfile";
 import SuiteEditorProfile from "@/features/suites/SuiteEditorProfile";
 
 export function SectionPage({ section }: { section: SectionId }) {
+    const nav = useNavigate();
     return (
         <Routes>
             <Route element={<LayoutShell section={section} />}>
                 <Route index element={<SectionIndex section={section} />} />
                 
-                {/* Creation Endpoints */}
-                <Route path="suites/new" element={<SuiteEditorProfile isNew={true} parentNeedId={section} />} />
-                <Route path="protocols/new" element={<ProtocolEditorProfile isNew={true} parentNeedId={section} />} />
+                <Route path="suites/new" element={
+                    <div className="mx-auto max-w-[1200px] mt-6 lg:mt-0 lg:grid lg:grid-cols-[1fr_350px] xl:grid-cols-[1fr_400px] lg:gap-8">
+                        <SuiteEditorProfile isNew={true} parentNeedId={section} onClose={(newId) => { 
+                            if (newId) {
+                                // Important: We MUST use the React Router to avoid wiping the transient Mock memory objects out on page reload
+                                nav(`/${section}/suites/${newId}`);
+                            }
+                            else nav("..");
+                        }} />
+                        <aside className="hidden lg:block space-y-6 pt-6">
+                            <div className="rounded-2xl border bg-gray-50/80 p-5 shadow-sm lg:sticky lg:top-0">
+                                <h2 className="mb-4 font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-200 pb-3">
+                                    Suite Details
+                                </h2>
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Release</h3>
+                                            <p className="text-sm text-gray-900 leading-relaxed">v0.1.0 &middot; en</p>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Signals</h3>
+                                            <p className="text-sm text-gray-900 leading-relaxed">
+                                                Follows: 0<span className="block text-gray-900 mt-0.5">Adopts: 0</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </aside>
+                    </div>
+                } />
+                <Route path="protocols/new" element={
+                    <div className="mx-auto max-w-[1200px] lg:grid lg:grid-cols-[1fr_350px] xl:grid-cols-[1fr_400px] lg:gap-8">
+                        <ProtocolEditorProfile isNew={true} parentNeedId={section} />
+                        <aside className="hidden lg:block space-y-6">
+                            <div className="rounded-2xl border bg-gray-50/80 p-5 shadow-sm border-dashed border-gray-200">
+                                <p className="text-gray-500 mb-2 font-medium">Genesis Record</p>
+                                <p className="text-sm text-gray-500">You are authoring a new root atomic graph node. Metadata analytics will unlock upon successful PDS network broadcast.</p>
+                            </div>
+                        </aside>
+                    </div>
+                } />
                 <Route path="needs/new" element={<NeedEditorProfile isNew={true} parentLineageId={section} />} />
-                <Route path="suites/:suiteId/protocols/new" element={<ProtocolEditorProfile isNew={true} parentNeedId={section} />} />
-                <Route path="suites/:suiteId" element={<SuiteDetailWrapper />} />
+                <Route path="suites/:suiteId/protocols/new" element={
+                    <div className="mx-auto max-w-[1200px] lg:grid lg:grid-cols-[1fr_350px] xl:grid-cols-[1fr_400px] lg:gap-8">
+                        <ProtocolEditorProfile isNew={true} parentNeedId={section} />
+                        <aside className="hidden lg:block space-y-6">
+                            <div className="rounded-2xl border bg-gray-50/80 p-5 shadow-sm border-dashed border-gray-200">
+                                <p className="text-gray-500 mb-2 font-medium">Genesis Record</p>
+                                <p className="text-sm text-gray-500">You are authoring a new root atomic graph node. Metadata analytics will unlock upon successful PDS network broadcast.</p>
+                            </div>
+                        </aside>
+                    </div>
+                } />
+                <Route path="suites/:suiteId/*" element={<SuiteDetailWrapper />} />
                 <Route path="suites/:suiteId/protocols" element={<ProtocolSelectPrompt />} />
                 <Route path="suites/:suiteId/protocols/:protocolId/*" element={<ProtocolDetailWrapper />} />
                 

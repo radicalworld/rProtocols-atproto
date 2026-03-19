@@ -107,7 +107,12 @@ export class AppViewAdapter implements RPReadPort {
             if (!suiteData?.record) return [];
 
             const bundledRels = suiteData.record.bundledRelations || [];
-            const protoIds = bundledRels.filter((r: any) => r.type === 'protocolRef').map((r: any) => r.lineageId);
+            
+            // Extract from bundled relations if AppView indexed them, OR directly natively from the members block
+            let protoIds = bundledRels.filter((r: any) => r.type === 'protocolRef').map((r: any) => r.lineageId);
+            if (protoIds.length === 0 && suiteData.record.members?.protocols?.length > 0) {
+                protoIds = suiteData.record.members.protocols.map((p: any) => p.uri.split("/").pop()); // Extracts raw lineageId from StrongRef URI if necessary
+            }
             
             const protos: Protocol[] = [];
             for (const pid of protoIds) {
@@ -178,7 +183,27 @@ export class AppViewAdapter implements RPReadPort {
     async getNeedByVersion() { return null; }
     async getProtocolsForNeed() { return []; }
     async getMarks() { return []; }
-    async getSuite() { return null; }
+    async getSuite(suiteId: string): Promise<Suite | null> {
+        try {
+            const data = await xrpc('app.rp.entity.getCurrent', { lineageId: suiteId, policy: 'latest-any' });
+            if (data?.record) {
+                const s = data.record;
+                return {
+                    id: s.slug || s.lineageId || s.uri || "",
+                    lineageId: s.lineageId || s.uri || "",
+                    slug: s.slug || s.lineageId || "",
+                    title: s.title || "Untitled Suite",
+                    description: s.description || s.summary || "",
+                    purpose: s.purpose || "",
+                    language: s.language || "en",
+                    tags: s.tags || [],
+                    includeProtocols: s.members?.protocols?.map((p: any) => ({ lineageId: p.uri })) || []
+                } as Suite;
+            }
+        } catch (err) { console.error("AppView getSuite error:", err); }
+        return null;
+    }
+    
     async resolveProtocolSlug() { return null; }
     async getProtocolByVersion() { return null; }
     async getProtocolByCid() { return null; }

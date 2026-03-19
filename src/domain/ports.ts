@@ -32,14 +32,16 @@ export interface RPWritePort {
     unfollow(subjectId: string): Promise<void>;
     adopt(subjectId: string, context?: string): Promise<void>;
     unadopt?(subjectId: string): Promise<void>;
-    createNeed(payload: Pick<Need, "title" | "description" | "parentLineageId">): Promise<NeedId>;
-    createProtocol(payload: Pick<Protocol, "title" | "summary" | "body">): Promise<ProtocolId>;
+    createNeed(payload: Pick<Need, "title" | "description" | "parentLineageId" | "purpose" | "language" | "tags">): Promise<NeedId>;
+    createProtocol(payload: Pick<Protocol, "title" | "summary" | "body" | "tags" | "language">): Promise<ProtocolId>;
     linkProtocolServesNeed(protocolId: ProtocolId, needId: NeedId): Promise<void>;
     addProtocolToSuite(protocolId: ProtocolId, suiteId: SuiteId): Promise<void>;
     // Publishing (stubs for now)
     createProtocolRoot?(payload: { lineageId: string, slug: string }): Promise<void>;
     publishProtocolVersion?(v: Protocol): Promise<Protocol>;
     renameProtocolSlug?(lineageId: string, newSlug: string): Promise<void>;
+    createSuite(payload: Pick<Suite, "title" | "purpose" | "tags" | "language" | "includeProtocols"> & { parentNeedLineageId?: string }): Promise<SuiteId>;
+    updateSuiteDraft(lineageId: string, version: string, patch: any): Promise<void>;
     
     // Need Editing & Publishing
     updateNeedDraft(lineageId: string, version: string, patch: any): Promise<void>;

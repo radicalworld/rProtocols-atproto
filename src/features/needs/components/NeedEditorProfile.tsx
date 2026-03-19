@@ -64,11 +64,15 @@ export default function NeedEditorProfile({
                 const nid = await repo.createNeed({
                     title: form.title || "Untitled Need",
                     description: form.description || "",
+                    purpose: "",
+                    language: "en",
+                    tags: [],
                     parentLineageId: parentLineageId || undefined
                 });
                 
                 // Automatically set the author to follow their new creation
-                await repo.follow(nid);
+                const gen = await repo.getNeedByLineageId(nid) || await (repo as any).getNeedByVersion(nid, "1.0");
+                if (gen) await repo.follow(gen.lineageId);
                 
                 setMsg(`✅ Need created! Redirecting...`);
                 

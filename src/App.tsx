@@ -37,7 +37,7 @@ function bytesToBase64url(bytes: Uint8Array) {
 }
 
 async function createLocalRwDid(profile?: { email?: string; displayName?: string }) {
-  const secret = ed25519.utils.randomPrivateKey();
+  const secret = ed25519.utils.randomSecretKey();
   const pub = await ed25519.getPublicKeyAsync(secret);
   const pubB64 = bytesToBase64url(pub);
   const secretB64 = bytesToBase64url(secret);
