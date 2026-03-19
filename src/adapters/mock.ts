@@ -152,7 +152,23 @@ async function ensureSeeded() {
 // ---------- adapter ----------
 class MockAdapter implements RPRepository {
     // READ
-    async promoteProtocolVersion(id: string, version: string): Promise<void> {}
+    async promoteProtocolVersion(lineageId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string): Promise<void> {
+        console.log(`[DEBUG: mock.ts] Entering promoteProtocolVersion for ${lineageId} v${version} -> ${toStage}`);
+        const bucket = (protocolReleases as any)[lineageId];
+        if (bucket && bucket.releases[version]) {
+            bucket.releases[version].stage = toStage;
+            console.log(`[DEBUG: mock.ts] Firing stage update! bucket.releases[${version}].stage = ${toStage}`);
+            const cid = bucket.releases[version].cid;
+            if (cid && protoVersionsByCid[cid]) {
+                protoVersionsByCid[cid].stage = toStage;
+                protoVersionsByCid[cid].updatedAt = new Date().toISOString();
+                console.log(`[DEBUG: mock.ts] Updated CID ${cid} to stage ${toStage}`);
+            }
+        } else {
+            console.log(`[DEBUG: mock.ts] FAILED to find bucket or release! bucket:`, !!bucket);
+        }
+        saveToLocal();
+    }
 
     async resolveProtocolSlug(slug: string) {
         const lineageId = slugToRootId[slug] ?? null;
@@ -475,6 +491,14 @@ class MockAdapter implements RPRepository {
         saveToLocal();
     }
 
+    async promoteSuiteVersion(lineageId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string): Promise<void> {
+        const bucket = suiteReleases[lineageId];
+        if (bucket && bucket.releases[version]) {
+            bucket.releases[version].stage = toStage;
+        }
+        saveToLocal();
+    }
+
     // --- Need Editing (Mocks) ---
     async updateNeedDraft(lineageId: string, version: string, patch: any): Promise<void> {
         const root = this.findNeed(lineageId) || needs[lineageId];
@@ -491,7 +515,11 @@ class MockAdapter implements RPRepository {
     }
 
     async promoteNeedVersion(lineageId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string): Promise<void> {
-         // Do nothing for mock adapter
+        const root = this.findNeed(lineageId) || needs[lineageId];
+        if (root) {
+            (root as any).stage = toStage;
+        }
+        saveToLocal();
     }
 
     // --- Protocol Editing (Mocks) ---

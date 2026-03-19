@@ -77,12 +77,17 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
     const { major, minor } = parseVersion(versionString);
 
     // normalize stage names
+    const rawStage = release?.stage;
+    const computedStageFallback = major === 0 ? "draft" : "stable";
+    
+    console.log("[DEBUG: ProtocolProfile] Rendering Profile:", { p_id: p.id, selectedVersion, stage_from_release: rawStage, fallback: computedStageFallback });
+
     const uiStage: "draft" | "candidate" | "stable" | "archived" =
-        release?.stage === "candidate"
+        rawStage === "candidate"
             ? "candidate"
-            : release?.stage === "stable"
+            : rawStage === "stable"
             ? "stable"
-            : (release?.stage ?? (major === 0 ? "draft" : "stable")) as any;
+            : (rawStage ?? computedStageFallback) as any;
 
     const stageDisplayMap: Record<string, string> = {
         draft: "Still Evolving",

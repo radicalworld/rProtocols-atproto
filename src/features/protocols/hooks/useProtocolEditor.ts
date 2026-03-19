@@ -56,7 +56,7 @@ export function useProtocolEditor(rootId?: string, version?: string) {
       const draftState: ProtocolDraftState = {
          rootId: parsedSlug,
          version: uiVersion,
-         stage: "draft", 
+         stage: data.stage || release?.stage || "draft", 
          title: finalTitle,
          summary: finalSummary,
          body: finalBody,
@@ -101,11 +101,16 @@ export function useProtocolEditor(rootId?: string, version?: string) {
       }
 
       // 1. Write Data (inserts as Draft by default in PDS)
+      console.log("[DEBUG: useProtocolEditor] Calling updateProtocolDraft...", { rootId, targetVer, currentContent });
       await repo.updateProtocolDraft(rootId, targetVer, currentContent);
 
       // 2. Promote if requested
       if (targetStage !== "draft") {
+         console.log(`[DEBUG: useProtocolEditor] Promoting ${rootId} v${targetVer} to ${targetStage}...`);
          await repo.promoteProtocolVersion(rootId, targetVer, targetStage, `Published via editor`);
+         console.log("[DEBUG: useProtocolEditor] Promotion complete!");
+      } else {
+         console.log(`[DEBUG: useProtocolEditor] Not promoting! TargetStage == "draft".`);
       }
       
       await new Promise(resolve => setTimeout(resolve, 800));

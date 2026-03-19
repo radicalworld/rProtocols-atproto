@@ -215,6 +215,7 @@ export interface Suite {
   lineageId: SuiteId;
   slug: string;
   version?: string;
+  stage?: "draft" | "candidate" | "stable" | "deprecated";
   
   title: string;
   description?: string;

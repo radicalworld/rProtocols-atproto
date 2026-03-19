@@ -46,8 +46,8 @@ export function SuiteProfile({ suiteId: propId }: { suiteId?: string } = {}) {
   if (!suite) return <div className="mx-auto max-w-4xl p-6">Loading suite…</div>;
 
   const versionString = suite.version || "0.1.0";
-  const uiStage = "draft" as any;
-  const uiStageDisplay = "Still Evolving";
+  const uiStage = (suite.stage as any) || "draft";
+  const uiStageDisplay = uiStage === "stable" ? "Ready to Use" : uiStage === "candidate" ? "Ready for Review" : "Still Evolving";
   const language = suite.language || "en";
   const tags = suite.tags || [];
 
