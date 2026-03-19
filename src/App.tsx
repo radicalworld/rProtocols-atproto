@@ -13,7 +13,6 @@ import { SectionPage } from "@/features/sections/SectionPage";
 import { SuiteProfile } from "@/features/suites/SuiteProfile";
 import { ProtocolProfile } from "@/features/protocols/components/ProtocolProfile";
 import ExploreProtocolsPage from "@/features/protocols/routes/ExploreProtocolsPage";
-import ProtocolVersionPage from "@/features/protocols/routes/ProtocolVersionPage";
 import { NeedProfile, NeedVersionProfile, NeedEditorProfile } from "@/features/needs/components";
 import { SeedNetworkButton } from "@/features/dev/SeedNetworkButton";
 
@@ -97,12 +96,12 @@ export default function App() {
             {/* Suites & Protocols */}
             <Route path="/suite/:id" element={<SuiteProfile />} />
             <Route path="/protocol/:id" element={<ProtocolProfile />} />
-            <Route path="/protocols/:id/versions/:version" element={<ProtocolVersionPage />} />
+            <Route path="/protocols/:id/versions/:version" element={<ProtocolProfile />} />
 
             {/* Needs routes */}
             <Route path="/needs/new" element={<NeedEditorProfile isNew={true} />} />
             <Route path="/needs/:rootId" element={<NeedProfile />} />
-            <Route path="/needs/:rootId/v/:version" element={<NeedVersionProfile />} />
+            <Route path="/needs/:rootId/v/:version" element={<NeedProfile />} />
             <Route path="/needs/:rootId/edit" element={<NeedEditorProfile />} />
 
             {/* Optional short link redirect */}

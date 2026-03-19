@@ -4,15 +4,19 @@ import { useRepo } from "@/domain/repo";
 import type { Suite, Protocol } from "@/domain/types";
 import { FollowEye } from "@/features/marks/FollowEye";
 import { AdoptButton } from "@/features/marks/AdoptButton";
+import { STAGE_DISPLAY_MAP, formatVersion } from "@/lib/version";
+import ReactMarkdown from "react-markdown";
 import { useSession } from "@/features/auth/SessionProvider";
 import { Pencil } from "lucide-react";
 import SuiteEditorProfile from "@/features/suites/SuiteEditorProfile";
 import ProtocolBadge from "@/features/protocols/components/ProtocolBadge";
 import { useFollowed } from "@/features/marks/useFollowed";
 import { useAdopted } from "@/features/marks/useAdopted";
+import { latestSuiteVersion, getSuiteRelease, listSuiteReleases } from "@/features/suites/lib/releases";
+import { SuiteVersionSwitcher } from "@/features/suites/components/SuiteVersionSwitcher";
 
 export function SuiteProfile({ suiteId: propId }: { suiteId?: string } = {}) {
-  const { id: paramId = "" } = useParams();
+  const { id: paramId = "", version: paramVersion } = useParams();
   const id = propId || paramId;
   const location = useLocation();
   const nav = useNavigate();
@@ -45,11 +49,19 @@ export function SuiteProfile({ suiteId: propId }: { suiteId?: string } = {}) {
 
   if (!suite) return <div className="mx-auto max-w-4xl p-6">Loading suite…</div>;
 
-  const versionString = suite.version || "0.1.0";
-  const uiStage = (suite.stage as any) || "draft";
-  const uiStageDisplay = uiStage === "stable" ? "Ready to Use" : uiStage === "candidate" ? "Ready for Review" : "Still Evolving";
-  const language = suite.language || "en";
-  const tags = suite.tags || [];
+  const selectedVersion = paramVersion ?? latestSuiteVersion(suite.lineageId) ?? suite.version ?? "1.0";
+  const release = getSuiteRelease(suite.lineageId, selectedVersion);
+  
+  const versionString = release?.version ?? selectedVersion;
+  const uiStage = (release?.stage as any) || (suite.stage as any) || "draft";
+  const uiStageDisplay = STAGE_DISPLAY_MAP[uiStage] || uiStage;
+  const language = release?.language || suite.language || "en";
+  const tags = release?.tags || suite.tags || [];
+  
+  const contentTitle = release?.title || suite.title;
+  const contentDescription = release?.description || release?.purpose || suite.description || suite.purpose;
+  
+  const versions = listSuiteReleases(suite.lineageId);
 
   return (
     <div className="mx-auto max-w-[1200px] space-y-6 lg:space-y-0 lg:grid lg:grid-cols-[1fr_350px] xl:grid-cols-[1fr_400px] lg:gap-8 animate-fade-in-up">
@@ -61,7 +73,7 @@ export function SuiteProfile({ suiteId: propId }: { suiteId?: string } = {}) {
           <>
             <header className="flex flex-col gap-4">
             <div className="flex items-start justify-between">
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900">{suite.title}</h1>
+              <h1 className="text-3xl font-bold tracking-tight text-gray-900">{contentTitle}</h1>
               <div className="flex items-center gap-2 shrink-0 mt-1">
                 {session && (
                     <Link
@@ -80,7 +92,7 @@ export function SuiteProfile({ suiteId: propId }: { suiteId?: string } = {}) {
 
             <div className="flex items-center justify-between bg-gray-50/50 p-2 rounded-lg border border-gray-100">
                 <div className="flex items-center gap-2">
-                    <ProtocolBadge version={`v${versionString}`} stage="stable" />
+                    <ProtocolBadge version={`v${formatVersion(versionString)}`} stage="stable" />
                     <ProtocolBadge version={uiStageDisplay} stage={uiStage} />
                     {language && (
                         <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-600 border border-gray-200 uppercase tracking-widest">
@@ -88,11 +100,21 @@ export function SuiteProfile({ suiteId: propId }: { suiteId?: string } = {}) {
                         </span>
                     )}
                 </div>
+                {versions.length > 0 && (
+                    <SuiteVersionSwitcher 
+                        id={suite.lineageId} 
+                        currentVersion={versionString} 
+                        onChange={(v) => {
+                            const base = location.pathname.split("/versions/")[0];
+                            nav(`${base}/versions/${v}`);
+                        }} 
+                    />
+                )}
             </div>
           </header>
           
-          {(suite.description || suite.purpose) && (
-              <p className="text-lg text-gray-600 leading-relaxed">{suite.description || suite.purpose}</p>
+          {contentDescription && (
+              <p className="text-lg text-gray-600 leading-relaxed">{contentDescription}</p>
           )}
           {/* Main Body: Protocols List */}
           <div className="mt-8 pt-8 border-t border-gray-100">

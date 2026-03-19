@@ -1,5 +1,5 @@
-// src/features/protocols/releases.ts
 import { protocolReleases } from "@/data/releases";
+import { protocolLineage } from "@/data/seeds";
 import {
   ProtocolRelease,
   Stage,
@@ -34,7 +34,6 @@ export function getRelease(id: string, version?: VersionString): ProtocolRelease
 // If keeping lineage data elsewhere, leave this passthrough as-is.
 // Update its type if you have a global Lineage type.
 export function getLineage(id: string) {
-  // @ts-expect-error protocolLineage is provided by seeds; type it if desired
   return protocolLineage[id] ?? { previousVersion: null, forkOf: null, children: [] };
 }
 

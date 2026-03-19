@@ -23,7 +23,7 @@ export function RepoProvider({ children, repo }: { children: React.ReactNode; re
         // Create a base proxy that prefers mockRepo in DEV so local edits reflect instantly.
         // In prod, it prefers AppView for reads, falling back to mockRepo for un-ported queries.
 
-        const useMockFirst = false;
+        const useMockFirst = true;
 
         const baseReader: any = Object.create(mockRepo);
 
@@ -52,10 +52,10 @@ export function RepoProvider({ children, repo }: { children: React.ReactNode; re
         };
 
         baseReader.getSuite = async (id: string) => {
-            if (useMockFirst) return mockRepo.getSuite(id);
+            if (useMockFirst) return (mockRepo as any).getSuiteWithActiveMerge(id);
             // Fallback to appview if implemented, otherwise mock repo directly
             const res = await (appViewAdapter as any).getSuite?.(id);
-            return res || mockRepo.getSuite(id);
+            return res || (mockRepo as any).getSuiteWithActiveMerge(id);
         };
 
         baseReader.getProtocols = async () => {

@@ -78,8 +78,8 @@ export function useProtocolEditor(rootId?: string, version?: string) {
 
   const publishProtocol = useCallback(
     async (
-      versionType: "patch" | "minor", 
-      targetStage: "draft" | "candidate" | "stable", 
+      versionType: "patch" | "minor" | "major", 
+      targetStage: "draft" | "candidate" | "stable" | "deprecated", 
       currentContent: Record<string, unknown>
     ) => {
       if (!rootId || !draft) return;
@@ -91,7 +91,12 @@ export function useProtocolEditor(rootId?: string, version?: string) {
       let minor = parseInt(parts[1], 10) || 0;
       let patch = parseInt(parts[2], 10) || 0;
 
-      if (versionType === 'minor') {
+      if (versionType === 'major') {
+        major += 1;
+        minor = 0;
+        patch = 0;
+        targetVer = `${major}.${minor}.${patch}`;
+      } else if (versionType === 'minor') {
         minor += 1;
         patch = 0;
         targetVer = `${major}.${minor}`;

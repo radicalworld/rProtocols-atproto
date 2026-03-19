@@ -7,7 +7,7 @@ import { FollowEye } from "@/features/marks/FollowEye";
 import { useFollowed } from "@/features/marks/useFollowed";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { parseVersion } from "@/lib/version";
+import { parseVersion, STAGE_DISPLAY_MAP, formatVersion } from "@/lib/version";
 import { getNeedRelease, latestNeedVersion, listNeedReleases } from "@/features/needs/lib/releases";
 import NeedBadge from "@/features/needs/components/NeedBadge";
 import { NeedVersionSwitcher } from "@/features/needs/components/NeedVersionSwitcher";
@@ -17,7 +17,7 @@ import { Edit } from "lucide-react";
 import { useSession } from "@/features/auth/SessionProvider";
 
 export function NeedProfile() {
-  const { rootId = "" } = useParams();
+  const { rootId = "", version: paramVersion } = useParams();
   const nav = useNavigate();
   const repo = useRepo();
   const { session } = useSession();
@@ -54,19 +54,13 @@ export function NeedProfile() {
   if (!n) return <div className="mx-auto max-w-3xl p-6">Loading need…</div>;
 
   // version info
-  const selectedVersion = parsed.ver ?? latestNeedVersion(n.lineageId) ?? "1.0";
+  const selectedVersion = parsed.ver ?? paramVersion ?? latestNeedVersion(n.lineageId) ?? "1.0";
   const release = getNeedRelease(n.lineageId, selectedVersion);
   const versionString = release?.version ?? selectedVersion;
   const { major, minor } = parseVersion(versionString);
   const uiStage = release?.stage ?? (major === 0 ? "draft" : "stable");
 
-  const stageDisplayMap: Record<string, string> = {
-    draft: "Still Evolving",
-    candidate: "Ready for Review",
-    stable: "Ready to Use",
-    archived: "Archived"
-  };
-  const uiStageDisplay = stageDisplayMap[uiStage] || uiStage;
+  const uiStageDisplay = STAGE_DISPLAY_MAP[uiStage] || uiStage;
 
   // data normalization
   const description = release?.description ?? n.description ?? "";
@@ -124,7 +118,7 @@ export function NeedProfile() {
           <div>
             <div className="font-medium text-gray-900">Release</div>
             <div>
-              v{versionString}
+              v{formatVersion(versionString)}
               {date ? ` · ${date}` : ""}
               {language ? ` · ${language}` : ""}
             </div>

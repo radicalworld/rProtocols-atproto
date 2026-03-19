@@ -101,6 +101,14 @@ function loadFromLocal() {
         Object.keys(protocolReleases).forEach(k => delete protocolReleases[k]); Object.assign(protocolReleases, db.protocolReleases);
         if (db.suiteReleases) {
             Object.keys(suiteReleases).forEach(k => delete suiteReleases[k]); Object.assign(suiteReleases, db.suiteReleases);
+            // Self-healing loop: fix legacy corrupted objects saved without internal `.version` tags
+            Object.values(suiteReleases).forEach((bucket: any) => {
+                if (bucket && bucket.releases) {
+                    Object.entries(bucket.releases).forEach(([verKey, releaseObj]: [string, any]) => {
+                        if (!releaseObj.version) releaseObj.version = verKey;
+                    });
+                }
+            });
         }
         return true;
     } catch(e) { return false; }
@@ -112,6 +120,24 @@ loadFromLocal();
 // Categories perfectly map 1:1 with Top-Level Root Needs.
 // ---------- helpers ----------
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
+
+// Ensure every suite natively tracks at least its active version node 
+// to prevent length===0 UI bugs inside the SuiteVersionSwitcher mapping
+Object.values(suites).forEach(suite => {
+    if (!suiteReleases[suite.lineageId]) {
+        const fallbackVersion = suite.version || "1.0.0";
+        suiteReleases[suite.lineageId] = {
+            current: fallbackVersion,
+            releases: {
+                [fallbackVersion]: { 
+                    ...clone(suite), 
+                    version: fallbackVersion,
+                    stage: suite.stage || "draft" 
+                }
+            }
+        };
+    }
+});
 
 function toNeedRelease(n: Need): NeedRelease {
     return {
@@ -228,8 +254,32 @@ class MockAdapter implements RPRepository {
     }
 
     async getSuite(id: SuiteId) {
+        return this.getSuiteWithActiveMerge(id);
+    }
+
+    async getSuiteWithActiveMerge(id: SuiteId) {
         const s = this.findSuite(id);
         if (!s) return null;
+
+        console.log("Mock.ts getSuite Trace:", { 
+            queryId: id, 
+            resolvedLineageId: s.lineageId, 
+            suiteReleasesExists: typeof suiteReleases !== 'undefined',
+            hasKey: !!(typeof suiteReleases !== 'undefined' && suiteReleases[s.lineageId]),
+            availableKeys: typeof suiteReleases !== 'undefined' ? Object.keys(suiteReleases) : []
+        });
+
+        if (typeof suiteReleases !== 'undefined' && suiteReleases[s.lineageId]) {
+            const bucket = suiteReleases[s.lineageId];
+            let active = bucket.releases[bucket.current];
+            if (!active) {
+                const available = Object.values(bucket.releases);
+                if (available.length > 0) active = available[available.length - 1] as any;
+            }
+            if (active) {
+                return clone({ ...s, ...active });
+            }
+        }
 
         return clone(s);
     }
@@ -261,14 +311,15 @@ class MockAdapter implements RPRepository {
     }
 
     async getProtocols(): Promise<Protocol[]> {
-        return Object.keys(protocolReleases).map(id => ({
-            id,
-            lineageId: id,
-            slug: id,
-            title: protocolReleases[id][0].title || "",
-            summary: protocolReleases[id][0].summary,
-            body: protocolReleases[id][0].content,
-        }));
+        return Object.values(protocols).map(p => {
+            let active = p;
+            if (typeof protocolReleases !== 'undefined' && protocolReleases[p.lineageId]) {
+                const bucket = protocolReleases[p.lineageId];
+                const snap = bucket.releases[bucket.current];
+                if (snap) active = { ...p, ...snap };
+            }
+            return clone(active);
+        });
     }
 
     async getProtocolsForNeed(needId: NeedId): Promise<Protocol[]> {
@@ -359,6 +410,8 @@ class MockAdapter implements RPRepository {
         suites[id] = {
             id,
             lineageId: `rp_st_${id}`,
+            version: "0.1.0",
+            stage: "draft",
             slug: id,
             title: payload.title,
             tags: payload.tags || [],
@@ -369,6 +422,16 @@ class MockAdapter implements RPRepository {
         
         if (payload.parentNeedLineageId) {
             await this.linkSuiteServesNeed(id, payload.parentNeedLineageId);
+        }
+        
+        // Seed the release bucket to natively allow version tracking immediately
+        if (typeof suiteReleases !== 'undefined') {
+            suiteReleases[suites[id].lineageId] = {
+                current: "0.1.0",
+                releases: {
+                    "0.1.0": clone(suites[id])
+                }
+            };
         }
         
         saveToLocal();

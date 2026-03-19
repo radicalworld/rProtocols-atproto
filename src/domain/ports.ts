@@ -42,7 +42,7 @@ export interface RPWritePort {
     renameProtocolSlug?(lineageId: string, newSlug: string): Promise<void>;
     createSuite(payload: Pick<Suite, "title" | "purpose" | "tags" | "language" | "includeProtocols"> & { parentNeedLineageId?: string }): Promise<SuiteId>;
     updateSuiteDraft(lineageId: string, version: string, patch: any): Promise<void>;
-    
+
     // Need Editing & Publishing
     updateNeedDraft(lineageId: string, version: string, patch: any): Promise<void>;
     promoteNeedVersion(lineageId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string): Promise<void>;
@@ -50,6 +50,7 @@ export interface RPWritePort {
     // Protocol Editing & Publishing
     updateProtocolDraft(lineageId: string, version: string, patch: any): Promise<void>;
     promoteProtocolVersion(lineageId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string): Promise<void>;
+    promoteSuiteVersion(lineageId: string, version: string, toStage: "candidate" | "stable" | "deprecated", changeDescription?: string): Promise<void>;
 }
 
 // ---------- REPOSITORY (combined) ----------

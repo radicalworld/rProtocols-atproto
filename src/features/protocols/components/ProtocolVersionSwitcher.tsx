@@ -1,6 +1,7 @@
 // src/features/protocols/components/ProtocolVersionSwitcher.tsx
 import { VersionSwitcherCore } from "@/components/VersionSwitcherCore";
 import { listReleases } from "@/features/protocols/lib/releases";
+import { STAGE_DISPLAY_UPPER_MAP } from "@/lib/version";
 
 export function ProtocolVersionSwitcher({
   id,
@@ -14,12 +15,6 @@ export function ProtocolVersionSwitcher({
   className?: string;
 }) {
   const items = listReleases(id).map((r) => ({ version: r.version, stage: r.stage }));
-  const stageDisplayMap: Record<string, string> = {
-    draft: "STILL EVOLVING",
-    candidate: "READY FOR REVIEW",
-    stable: "READY TO USE",
-    archived: "ARCHIVED"
-  };
 
   return (
     <VersionSwitcherCore
@@ -27,7 +22,7 @@ export function ProtocolVersionSwitcher({
       current={currentVersion}
       onChange={onChange}
       hideStage="published"
-      stageLabel={(s) => stageDisplayMap[s] || (s === "rc" ? "READY FOR REVIEW" : s?.toUpperCase() ?? "")}
+      stageLabel={(s) => STAGE_DISPLAY_UPPER_MAP[s] || (s === "rc" ? "READY FOR REVIEW" : s?.toUpperCase() ?? "")}
       className={className}
     />
   );

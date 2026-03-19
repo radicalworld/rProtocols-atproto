@@ -73,14 +73,22 @@ export function SectionPage({ section }: { section: SectionId }) {
                         </aside>
                     </div>
                 } />
+                {/* Suites explicitly matching explicit versions */}
+                <Route path="suites/:suiteId/versions/:version" element={<SuiteDetailWrapper />} />
                 <Route path="suites/:suiteId/*" element={<SuiteDetailWrapper />} />
+                
                 <Route path="suites/:suiteId/protocols" element={<ProtocolSelectPrompt />} />
+                
+                {/* Protocols nested in suites catching versions natively */}
+                <Route path="suites/:suiteId/protocols/:protocolId/versions/:version" element={<ProtocolDetailWrapper />} />
                 <Route path="suites/:suiteId/protocols/:protocolId/*" element={<ProtocolDetailWrapper />} />
                 
                 {/* Fallbacks directly to protocol outside of suite context if needed */}
+                <Route path="protocols/:protocolId/versions/:version" element={<ProtocolDetailWrapper />} />
                 <Route path="protocols/:protocolId/*" element={<ProtocolDetailWrapper />} />
                 
                 {/* Nested Needs profile */}
+                <Route path="needs/:rootId/v/:version" element={<NeedDetailWrapper />} />
                 <Route path="needs/:rootId/*" element={<NeedDetailWrapper />} />
             </Route>
         </Routes>

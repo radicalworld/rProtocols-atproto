@@ -9,6 +9,8 @@ import {
 } from "@/features/needs/lib/releases";
 import { useRepo } from "@/domain/repo";
 import TiptapEditor from "@/components/ui/TiptapEditor";
+import NeedBadge from "@/features/needs/components/NeedBadge";
+import { STAGE_DISPLAY_MAP, formatVersion } from "@/lib/version";
 
 export default function NeedEditorProfile({
     rootId: propRootId,
@@ -120,8 +122,14 @@ export default function NeedEditorProfile({
                                 <span className="uppercase tracking-wider">{parentLineageId || "None"}</span>
                             </span>
                         ) : (
-                            <>Editing version: <span className="font-mono">v{release.version}</span>
-                            {latest && latest !== release.version ? ` (latest is v${latest})` : ""}</>
+                            <div className="flex items-center gap-2 mt-2">
+                                <NeedBadge version={`v${formatVersion(release?.version)}`} stage="stable" />
+                                <NeedBadge version={STAGE_DISPLAY_MAP[release?.stage as string] || release?.stage} stage={release?.stage as any} />
+                                <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 border border-gray-200 uppercase tracking-wider">
+                                    {release?.language || "EN"}
+                                </span>
+                                {latest && latest !== release.version && <span className="ml-2 text-xs italic text-gray-500">(latest is v{formatVersion(latest)})</span>}
+                            </div>
                         )}
                     </div>
                 </div>
@@ -157,7 +165,7 @@ export default function NeedEditorProfile({
             )}
 
             <label className="block" htmlFor="need-title">
-                <div className="text-sm font-medium text-gray-700">Title {isNew ? "" : <span className="text-xs text-gray-400 font-normal ml-1">(Immutable via Lineage)</span>}</div>
+                <div className="text-sm font-medium text-gray-700">Title {isNew ? "" : <span className="text-xs text-gray-400 font-normal ml-1">(Locked)</span>}</div>
                 <input
                     id="need-title"
                     name="title"

@@ -1,5 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import ProtocolBadge from "@/features/protocols/components/ProtocolBadge";
+import { STAGE_DISPLAY_MAP, formatVersion } from "@/lib/version";
 import { useRepo } from "@/domain/repo";
 import { Protocol } from "@/domain/types";
 import { parseVersion } from "@/lib/version";
@@ -31,12 +33,14 @@ export default function SuiteEditorProfile({
             const s = await repo.getSuite(rootId);
             if (!alive || !s) return;
             const protocols = await repo.getSuiteProtocols(s.lineageId);
+            console.log("SuiteEditor Hydration Dump -> getSuite Object:", s);
+            
             setFetchedDraft({
                 lineageId: s.lineageId,
-                version: "1.0.0", // mock semantic release format map
-                stage: "draft", 
+                version: (s as any).version || "1.0.0",
+                stage: s.stage || "draft", 
                 title: s.title,
-                purpose: s.purpose,
+                purpose: (s as any).purpose || (s as any).description || "",
                 language: s.language,
                 tags: s.tags,
                 includeProtocols: protocols.map(p => ({ lineageId: p.id, title: p.title, slug: p.slug }))
@@ -60,8 +64,8 @@ export default function SuiteEditorProfile({
     
     // Save Modal & Protocol Selection state
     const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
-    const [targetVersionType, setTargetVersionType] = useState<"patch" | "minor">("patch");
-    const [targetStage, setTargetStage] = useState<"draft" | "candidate" | "stable">("draft");
+    const [targetVersionType, setTargetVersionType] = useState<"patch" | "minor" | "major">("patch");
+    const [targetStage, setTargetStage] = useState<"draft" | "candidate" | "stable" | "deprecated">("draft");
     const [allProtocols, setAllProtocols] = useState<Protocol[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
@@ -73,7 +77,7 @@ export default function SuiteEditorProfile({
                 title: release.title ?? "",
                 purpose: release.purpose ?? "",
                 language: release.language ?? "en",
-                tags: release.tags ? release.tags.join(", ") : "",
+                tags: release.tags ? (Array.isArray(release.tags) ? release.tags.join(", ") : String(release.tags)) : "",
                 protocols: release.includeProtocols || [],
                 changeDescription: ""
             });
@@ -97,15 +101,25 @@ export default function SuiteEditorProfile({
         ).slice(0, 5); // Limit to top 5 hits
     }, [allProtocols, form.protocols, searchQuery]);
 
+    const { major, minor, patch } = parseVersion(release?.version || "0.1.0");
+    const nextPatch = `${major}.${minor}.${patch + 1}`;
+    const nextMinor = `${major}.${minor + 1}.0`;
+    const nextMajor = `${major + 1}.0.0`;
+
+    const isStageBump = !isNew && release && targetStage !== release.stage;
+    const isFirstActive = major === 0 && targetStage === 'stable';
+
+    useEffect(() => {
+        if (isStageBump && targetVersionType === 'patch') {
+            setTargetVersionType(isFirstActive ? 'major' : 'minor');
+        }
+    }, [targetStage, isStageBump, isFirstActive, targetVersionType]);
+
     if (!isNew && !release) return <div className="p-6 flex items-center gap-2"><div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /> Fetching latest version context…</div>;
     if (!isInitialized) return <div className="p-6 flex items-center gap-2"><div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /> Preparing editor…</div>;
 
     const canEdit = release?.stage === "draft" || release?.stage === "candidate";
     const hasChanges = isNew ? form.title.trim().length > 0 : true;
-
-    const { major, minor, patch } = parseVersion(release?.version || "0.1.0");
-    const nextPatch = `${major}.${minor}.${patch + 1}`;
-    const nextMinor = `${major}.${minor + 1}.0`;
 
     async function onUnifiedSave(action: "create" | "update", bumpLabel?: string) {
         setSaving(true);
@@ -129,18 +143,31 @@ export default function SuiteEditorProfile({
                 const generated = await repo.getSuite(sid);
                 if (generated) {
                     await repo.follow(generated.lineageId).catch(e => console.warn("Failed automatic self-follow:", e));
+                    if (targetStage !== 'draft' && repo.promoteSuiteVersion) {
+                        await repo.promoteSuiteVersion(generated.lineageId, "0.1.0", targetStage as any);
+                    }
                 }
                 
                 setMsg("✅ Suite published!");
                 if (onClose) setTimeout(() => onClose(sid), 800);
             } else {
-                await repo.updateSuiteDraft(release.lineageId, release.version, {
+                let targetVer = release.version;
+                if (targetVersionType === 'major') targetVer = nextMajor;
+                else if (targetVersionType === 'minor') targetVer = nextMinor;
+                else targetVer = nextPatch;
+
+                await repo.updateSuiteDraft(release.lineageId, targetVer, {
                     title: form.title,
                     purpose: form.purpose,
                     tags: form.tags.split(",").map(t => t.trim()).filter(Boolean),
                     language: form.language,
                     includeProtocols: mappedProtocols
                 });
+
+                if (targetStage !== 'draft' && repo.promoteSuiteVersion) {
+                    await repo.promoteSuiteVersion(release.lineageId, targetVer, targetStage as any);
+                }
+
                 setMsg("✅ Suite updated!");
                 if (onClose) setTimeout(() => onClose(), 800);
             }
@@ -202,7 +229,13 @@ export default function SuiteEditorProfile({
                                 <span className="uppercase tracking-widest text-xs bg-gray-100 rounded-full px-2.5 py-0.5 border border-gray-200">{parentNeedId || "Network"}</span>
                             </span>
                         ) : (
-                            <>Editing version: <span className="font-mono bg-gray-100 px-1.5 rounded">v{release?.version}</span></>
+                            <div className="flex items-center gap-2 mt-2">
+                                <ProtocolBadge version={`v${formatVersion(release?.version)}`} stage="stable" />
+                                <ProtocolBadge version={STAGE_DISPLAY_MAP[release?.stage as string] || release?.stage} stage={release?.stage as any} />
+                                <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 border border-gray-200 uppercase tracking-wider">
+                                    {release?.language || "EN"}
+                                </span>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -230,7 +263,7 @@ export default function SuiteEditorProfile({
             )}
 
             <label className="block" htmlFor="suite-title">
-                <div className="text-sm font-medium text-gray-700">Title {isNew ? "" : <span className="text-xs text-gray-400 font-normal ml-1">(Immutable via Lineage)</span>}</div>
+                <div className="text-sm font-medium text-gray-700">Title {isNew ? "" : <span className="text-xs text-gray-400 font-normal ml-1">(Locked)</span>}</div>
                 <input
                     id="suite-title"
                     name="title"
@@ -243,7 +276,7 @@ export default function SuiteEditorProfile({
 
             <div className="flex gap-6">
                 <label className="block flex-1" htmlFor="suite-language">
-                    <div className="text-sm font-medium text-gray-700">Language <span className="text-xs text-gray-400 font-normal ml-1">(Immutable)</span></div>
+                    <div className="text-sm font-medium text-gray-700">Language <span className="text-xs text-gray-400 font-normal ml-1">(Locked)</span></div>
                     <input
                         id="suite-language"
                         name="language"
@@ -381,18 +414,21 @@ export default function SuiteEditorProfile({
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 gap-2">
-                                    <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition ${targetVersionType === 'patch' ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'}`}>
+                                    <label className={`flex items-center p-3 border rounded-lg transition ${targetVersionType === 'patch' ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'} ${isStageBump ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
                                         <input 
                                             type="radio" 
                                             name="versionType" 
                                             value="patch"
                                             checked={targetVersionType === 'patch'} 
                                             onChange={() => setTargetVersionType('patch')}
-                                            className="h-4 w-4 text-blue-600" 
+                                            disabled={isStageBump}
+                                            className="h-4 w-4 text-blue-600 disabled:opacity-50" 
                                         />
                                         <span className="ml-3 block">
                                             <span className="block text-sm font-medium">Small fix or cleanup (v{nextPatch})</span>
-                                            <span className="block text-xs text-gray-500">Append a new structural patch version. No prior records are overwritten.</span>
+                                            <span className="block text-xs text-gray-500">
+                                                {isStageBump ? "Disabled. Readiness changes require a minor or major bump." : "Append a new structural patch version. No prior records are overwritten."}
+                                            </span>
                                         </span>
                                     </label>
                                     <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition ${targetVersionType === 'minor' ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'}`}>
@@ -409,6 +445,22 @@ export default function SuiteEditorProfile({
                                             <span className="block text-xs text-gray-500">Append a new minor feature block layout. No prior records are overwritten.</span>
                                         </span>
                                     </label>
+                                    {isFirstActive && (
+                                        <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition ${targetVersionType === 'major' ? 'border-amber-500 bg-amber-50' : 'hover:bg-gray-50'}`}>
+                                            <input 
+                                                type="radio" 
+                                                name="versionType" 
+                                                value="major"
+                                                checked={targetVersionType === 'major'} 
+                                                onChange={() => setTargetVersionType('major')}
+                                                className="h-4 w-4 text-amber-600" 
+                                            />
+                                            <span className="ml-3 block">
+                                                <span className="block text-sm font-medium text-amber-900">Official Release (v{nextMajor})</span>
+                                                <span className="block text-xs text-amber-700/80">Promotes this Suite mapping to an active, structurally certified component.</span>
+                                            </span>
+                                        </label>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -419,17 +471,22 @@ export default function SuiteEditorProfile({
                                 <button 
                                     onClick={() => setTargetStage('draft')}
                                     className={`flex-1 py-1.5 text-sm font-medium rounded-md transition ${targetStage === 'draft' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
-                                >Still Evolving</button>
+                                >Evolving</button>
                                 <button 
                                     onClick={() => !isNew && setTargetStage('candidate')}
                                     disabled={isNew}
                                     className={`flex-1 py-1.5 text-sm font-medium rounded-md transition ${targetStage === 'candidate' ? 'bg-white shadow-sm text-amber-700' : 'text-gray-500 hover:text-gray-700'} ${isNew ? 'opacity-40 cursor-not-allowed' : ''}`}
-                                >Ready for Review</button>
+                                >In Review</button>
                                 <button 
                                     onClick={() => !isNew && setTargetStage('stable')}
                                     disabled={isNew}
                                     className={`flex-1 py-1.5 text-sm font-medium rounded-md transition ${targetStage === 'stable' ? 'bg-white shadow-sm text-green-700' : 'text-gray-500 hover:text-gray-700'} ${isNew ? 'opacity-40 cursor-not-allowed' : ''}`}
-                                >Ready to Use</button>
+                                >Active</button>
+                                <button 
+                                    onClick={() => !isNew && setTargetStage('deprecated')}
+                                    disabled={isNew}
+                                    className={`flex-1 py-1.5 text-sm font-medium rounded-md transition ${targetStage === 'deprecated' ? 'bg-white shadow-sm text-red-700' : 'text-gray-500 hover:text-gray-700'} ${isNew ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                >Retired</button>
                             </div>
                         </div>
 

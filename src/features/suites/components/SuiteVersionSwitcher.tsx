@@ -1,20 +1,19 @@
-// src/features/needs/components/NeedVersionSwitcher.tsx
 import { VersionSwitcherCore } from "@/components/VersionSwitcherCore";
-import { listNeedReleases } from "@/features/needs/lib/releases";
+import { listSuiteReleases } from "@/features/suites/lib/releases";
 import { STAGE_DISPLAY_UPPER_MAP } from "@/lib/version";
 
-export function NeedVersionSwitcher({
-  rootId,
+export function SuiteVersionSwitcher({
+  id,
   currentVersion,
   onChange,
   className,
 }: {
-  rootId: string;
+  id: string;
   currentVersion?: string;
   onChange: (v: string) => void;
   className?: string;
 }) {
-  const items = listNeedReleases(rootId).map((r) => ({ version: r.version, stage: r.stage }));
+  const items = listSuiteReleases(id).map((r) => ({ version: r.version, stage: r.stage }));
 
   return (
     <VersionSwitcherCore

@@ -8,9 +8,9 @@ import { AdoptButton } from "@/features/marks/AdoptButton";
 import { useAdopted } from "@/features/marks/useAdopted";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { parseVersion } from "@/lib/version";
 import { getRelease, latestVersion, listReleases } from "@/features/protocols/lib/releases";
 import { protocolReleases } from "@/data/releases";
+import { parseVersion, STAGE_DISPLAY_MAP, formatVersion } from "@/lib/version";
 import ProtocolBadge from "@/features/protocols/components/ProtocolBadge";
 import { ProtocolVersionSwitcher } from "@/features/protocols/components/ProtocolVersionSwitcher";
 import { useNavigate, Link, useLocation } from "react-router-dom";
@@ -19,7 +19,7 @@ import ProtocolEditorProfile from "@/features/protocols/components/ProtocolEdito
 import { useSession } from "@/features/auth/SessionProvider";
 
 export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } = {}) {
-    const { id: paramId = "" } = useParams();
+    const { id: paramId = "", version: paramVersion } = useParams();
     const id = propId || paramId;
     const nav = useNavigate();
     const location = useLocation();
@@ -70,7 +70,7 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
     const selectedVersion =
         parsed.kind === "slugVer"
             ? parsed.ver
-            : latestVersion(p.id) ?? "1.0";
+            : paramVersion ?? latestVersion(p.id) ?? "1.0";
 
     const release = getRelease(p.id, selectedVersion);
     const versionString = release?.version ?? selectedVersion ?? "1.0";
@@ -89,13 +89,7 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
             ? "stable"
             : (rawStage ?? computedStageFallback) as any;
 
-    const stageDisplayMap: Record<string, string> = {
-        draft: "Still Evolving",
-        candidate: "Ready for Review",
-        stable: "Ready to Use",
-        archived: "Archived"
-    };
-    const uiStageDisplay = stageDisplayMap[uiStage] || uiStage;
+    const uiStageDisplay = STAGE_DISPLAY_MAP[uiStage] || uiStage;
 
     const body = p.body || release?.protocolBody || "";
     const canAdopt = release?.adoptEnabled ?? true;
@@ -158,7 +152,7 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
 
                             <div className="flex items-center justify-between bg-gray-50/50 p-2 rounded-lg border border-gray-100">
                             <div className="flex items-center gap-2">
-                                <ProtocolBadge version={`v${versionString}`} stage="stable" />
+                                <ProtocolBadge version={`v${formatVersion(versionString)}`} stage="stable" />
                                 <ProtocolBadge version={uiStageDisplay} stage={uiStage === "stable" ? "stable" : uiStage as any} />
                                 {language && (
                                     <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-600 border border-gray-200 uppercase tracking-widest">
@@ -167,7 +161,14 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
                                 )}
                             </div>
                             {versions.length > 0 && (
-                                <ProtocolVersionSwitcher id={p.id} currentVersion={versionString} onChange={(v) => nav(`/protocols/${p.id}/versions/${v}`)} />
+                                <ProtocolVersionSwitcher 
+                                    id={p.id} 
+                                    currentVersion={versionString} 
+                                    onChange={(v) => {
+                                        const base = location.pathname.split("/versions/")[0];
+                                        nav(`${base}/versions/${v}`);
+                                    }} 
+                                />
                             )}
                             </div>
                         </header>
@@ -209,7 +210,7 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="text-sm text-gray-600">
                                 <div className="font-medium text-gray-900">Release</div>
-                                <div>v{versionString}{date ? ` · ${date}` : ""}{language ? ` · ${language}` : ""}</div>
+                                <div>v{formatVersion(versionString)}{date ? ` · ${date}` : ""}{language ? ` · ${language}` : ""}</div>
                             </div>
                             <div className="text-sm text-gray-600">
                                 <div className="font-medium text-gray-900">Signals</div>
