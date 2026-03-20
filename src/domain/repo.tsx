@@ -67,9 +67,35 @@ export function RepoProvider({ children, repo }: { children: React.ReactNode; re
 
         baseReader.getNeedsBySection = async (section: SectionId) => {
             if (useMockFirst) return mockRepo.getNeedsBySection(section);
-            const res = await appViewAdapter.getNeedsBySection();
+            const res = await appViewAdapter.getNeedsBySection(section);
             if (res && res.length > 0) return res;
             return mockRepo.getNeedsBySection(section);
+        };
+
+        baseReader.getNeedTree = async (id: string) => {
+            const need = await baseReader.getNeedByLineageId(id);
+            if (!need) return mockRepo.getNeedTree(id);
+            
+            const childrenNodes: any[] = [];
+            for (const cid of (need.childLineageIds || [])) {
+                 const childNeed = await baseReader.getNeedByLineageId(cid);
+                 if (childNeed) {
+                     childrenNodes.push({
+                         ...childNeed,
+                         needRootId: childNeed.lineageId,
+                         version: (childNeed as any).version || "0.1.0",
+                         stage: (childNeed as any).stage || "draft"
+                     });
+                 }
+            }
+            
+            return {
+                ...need,
+                needRootId: need.lineageId,
+                version: (need as any).version || "0.1.0",
+                stage: (need as any).stage || "draft",
+                children: childrenNodes
+            } as any;
         };
 
         baseReader.getSuitesForNeed = async (needId: string) => {
@@ -77,6 +103,13 @@ export function RepoProvider({ children, repo }: { children: React.ReactNode; re
             const res = await appViewAdapter.getSuitesForNeed(needId);
             if (res && res.length > 0) return res;
             return mockRepo.getSuitesForNeed(needId);
+        };
+
+        baseReader.getProtocolsForNeed = async (needId: string) => {
+            if (useMockFirst) return mockRepo.getProtocolsForNeed(needId);
+            const res = await appViewAdapter.getProtocolsForNeed(needId);
+            if (res && res.length > 0) return res;
+            return mockRepo.getProtocolsForNeed(needId);
         };
 
         baseReader.getSuiteProtocols = async (suiteId: string) => {

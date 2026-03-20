@@ -21,7 +21,7 @@ export default function NeedVersionProfile() {
     <article className="mx-auto max-w-3xl space-y-6 p-6">
       <header className="flex items-start justify-between">
         <h1 className="text-2xl font-semibold">{release.title}</h1>
-        <FollowEye subjectId={rootId} label="Follow need" />
+        <FollowEye subjectId={rootId} kind="need" label="Follow need" />
       </header>
 
       <div className="flex items-center justify-between text-sm text-gray-500">

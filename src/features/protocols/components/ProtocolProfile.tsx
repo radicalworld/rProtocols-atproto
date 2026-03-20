@@ -33,8 +33,8 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
     const [notFound, setNotFound] = useState(false);
     
     // Wire up dynamic tracking overlays to combat stale static JSON caches
-    const { isFollowed } = useFollowed(p?.id ?? "");
-    const { adopted: isAdopted } = useAdopted(p?.id ?? "");
+    const { isFollowed } = useFollowed(p?.id ?? "", "protocol");
+    const { adopted: isAdopted } = useAdopted(p?.id ?? "", "protocol");
 
     const parsed = useMemo(() => {
         // support: /protocol/:slug , /protocol/:slug@v1.2.3 , /protocol/cid/<cid>
@@ -143,6 +143,7 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
                             <div className="flex items-center gap-2 shrink-0 mt-1">
                                 <ProfileActions 
                                     subjectId={p.id} 
+                                    kind="protocol"
                                     editUrl="edit" 
                                     newUrl={`/${sectionId}/protocols/new`}
                                     editTitle="Edit Protocol" 

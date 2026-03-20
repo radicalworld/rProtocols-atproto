@@ -29,10 +29,10 @@ export interface RPReadPort {
 
 // ---------- WRITE PORT ----------
 export interface RPWritePort {
-    follow(subjectId: string): Promise<void>;
-    unfollow(subjectId: string): Promise<void>;
-    adopt(subjectId: string, context?: string): Promise<void>;
-    unadopt?(subjectId: string): Promise<void>;
+    follow(subjectId: string, kind: "need" | "protocol" | "suite"): Promise<void>;
+    unfollow(subjectId: string, kind: "need" | "protocol" | "suite"): Promise<void>;
+    adopt(subjectId: string, kind: "need" | "protocol" | "suite", context?: string): Promise<void>;
+    unadopt?(subjectId: string, kind: "need" | "protocol" | "suite"): Promise<void>;
     createNeed(payload: Pick<Need, "title" | "description" | "parentLineageId" | "purpose" | "language" | "tags"> & { forkFrom?: string }): Promise<NeedId>;
     createProtocol(payload: Pick<Protocol, "title" | "summary" | "body" | "tags" | "language"> & { forkFrom?: string }): Promise<ProtocolId>;
     linkProtocolServesNeed(protocolId: ProtocolId, needId: NeedId): Promise<void>;

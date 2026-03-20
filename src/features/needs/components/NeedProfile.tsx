@@ -28,7 +28,7 @@ export function NeedProfile() {
   const [notFound, setNotFound] = useState(false);
 
   // Dynamically overlay tracking signal offsets
-  const { isFollowed } = useFollowed(n?.lineageId ?? "");
+  const { isFollowed } = useFollowed(n?.lineageId ?? "", "need");
 
   // determine rootId and version from URL (like slug@ver pattern)
   const parsed = useMemo(() => {
@@ -94,6 +94,7 @@ export function NeedProfile() {
                 <div className="flex items-center gap-2 shrink-0 mt-1">
                   <ProfileActions 
                       subjectId={n.lineageId} 
+                      kind="need"
                       editUrl="edit" 
                       newUrl={`/${sectionId}/needs/new`}
                       editTitle="Edit Need" 
@@ -113,6 +114,7 @@ export function NeedProfile() {
                     <NeedVersionSwitcher
                       rootId={ rootId }
                       currentVersion={ release?.version ?? versionString }
+                      stage={uiStage}
                       onChange={(v) => {
                           const base = location.pathname.split("/v/")[0];
                           nav(`${base}/v/${v}`);

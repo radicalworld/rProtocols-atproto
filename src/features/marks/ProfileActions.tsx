@@ -6,6 +6,7 @@ import { useSession } from "@/features/auth/SessionProvider";
 
 interface ProfileActionsProps {
     subjectId: string;
+    kind: "need" | "protocol" | "suite";
     editUrl?: string;
     newUrl?: string;
     editTitle?: string;
@@ -16,6 +17,7 @@ interface ProfileActionsProps {
 
 export function ProfileActions({ 
     subjectId, 
+    kind,
     editUrl, 
     newUrl,
     editTitle = "Edit", 
@@ -58,9 +60,9 @@ export function ProfileActions({
                 )}
                 </>
             )}
-            <FollowEye subjectId={subjectId} label={followLabel} variant="circle" />
+            <FollowEye subjectId={subjectId} kind={kind} label={followLabel} variant="circle" />
             {showAdopt && (
-                <AdoptButton subjectId={subjectId} disabled={adoptDisabled} variant="circle" />
+                <AdoptButton subjectId={subjectId} kind={kind} disabled={adoptDisabled} variant="circle" />
             )}
         </div>
     );

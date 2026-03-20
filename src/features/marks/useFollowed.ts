@@ -6,7 +6,7 @@ import { useRepo } from "@/domain/repo";
  * Optimistically flips to true when you call `markFollow()`.
  */
 
-export function useFollowed(subjectId: string) {
+export function useFollowed(subjectId: string, kind: "need" | "protocol" | "suite") {
     const repo = useRepo();
     const [marks, setMarks] = useState<{ subjectId: string }[]>([]);
     const [optimistic, setOptimistic] = useState<null | boolean>(null); // null = no override
@@ -34,10 +34,10 @@ export function useFollowed(subjectId: string) {
     const toggleFollow = async () => {
         if (isFollowed) {
             setOptimistic(false);
-            try { await repo.unfollow(subjectId); } finally {}
+            try { await repo.unfollow(subjectId, kind); } finally {}
         } else {
             setOptimistic(true);
-            try { await repo.follow(subjectId); } finally {}
+            try { await repo.follow(subjectId, kind); } finally {}
         }
     };
 

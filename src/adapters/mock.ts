@@ -340,12 +340,12 @@ class MockAdapter implements RPRepository {
     }
 
     // WRITE
-    async follow(subjectId: string): Promise<void> {
+    async follow(subjectId: string, kind: "need" | "protocol" | "suite"): Promise<void> {
         const id = nanoid();
         marks[id] = {
             id,
             verb: "follow",
-            subjectKind: "protocol",
+            subjectKind: kind,
             subjectLineageId: subjectId,
             actorDid: "did:web:mock-user",
             status: "active",
@@ -353,7 +353,7 @@ class MockAdapter implements RPRepository {
         };
     }
 
-    async unfollow(subjectId: string): Promise<void> {
+    async unfollow(subjectId: string, kind: "need" | "protocol" | "suite"): Promise<void> {
         const entry = Object.values(marks).find(
             (m) => m.verb === "follow" && m.subjectLineageId === subjectId && m.status === "active"
         );
@@ -362,12 +362,12 @@ class MockAdapter implements RPRepository {
         }
     }
 
-    async adopt(subjectId: string, context?: string): Promise<void> {
+    async adopt(subjectId: string, kind: "need" | "protocol" | "suite", context?: string): Promise<void> {
         const id = nanoid();
         marks[id] = {
             id,
             verb: "adopt",
-            subjectKind: "protocol",
+            subjectKind: kind,
             subjectLineageId: subjectId,
             actorDid: "did:web:mock-user",
             status: "active",
@@ -376,7 +376,7 @@ class MockAdapter implements RPRepository {
         };
     }
 
-    async unadopt(subjectId: string): Promise<void> {
+    async unadopt(subjectId: string, kind: "need" | "protocol" | "suite"): Promise<void> {
         const entry = Object.values(marks).find(
             (m) => m.verb === "adopt" && m.subjectLineageId === subjectId && m.status === "active"
         );

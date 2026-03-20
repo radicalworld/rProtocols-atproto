@@ -134,7 +134,7 @@ export default function NeedEditorProfile({
                 // Automatically set the author to follow their new creation
                 const gen = await repo.getNeedByLineageId(nid) || await (repo as any).getNeedByVersion(nid, "1.0");
                 if (gen) {
-                    await repo.follow(gen.lineageId).catch(e => console.warn("Failed automatic self-follow:", e));
+                    await repo.follow(gen.lineageId, "need").catch(e => console.warn("Failed automatic self-follow:", e));
                     if (targetStage !== 'draft' && repo.promoteNeedVersion) {
                         await repo.promoteNeedVersion(gen.lineageId, "0.1.0", targetStage as any);
                     }

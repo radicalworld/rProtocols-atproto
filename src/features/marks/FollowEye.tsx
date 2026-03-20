@@ -2,8 +2,8 @@
 import { Eye } from "lucide-react";
 import { useFollowed } from "./useFollowed";
 
-export function FollowEye({ subjectId, label, variant = "pill" }: { subjectId: string; label?: string; variant?: "pill" | "circle" }) {
-    const { isFollowed, toggleFollow } = useFollowed(subjectId);
+export function FollowEye({ subjectId, kind, label, variant = "pill" }: { subjectId: string; kind: "need" | "protocol" | "suite"; label?: string; variant?: "pill" | "circle" }) {
+    const { isFollowed, toggleFollow } = useFollowed(subjectId, kind);
 
     const baseClasses = "inline-flex items-center justify-center transition-colors border";
     const shapeClasses = variant === "circle" 

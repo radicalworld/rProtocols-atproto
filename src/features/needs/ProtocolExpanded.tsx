@@ -25,7 +25,7 @@ export function ProtocolExpanded({ protocolId }: { protocolId: string }) {
         <div className="space-y-2">
             <div className="text-sm text-gray-700">{p?.summary ?? "Protocol details"}</div>
             <div className="flex items-center gap-2">
-                <FollowEye subjectId={protocolId} label="Follow protocol" />
+                <FollowEye subjectId={protocolId} kind="protocol" label="Follow protocol" />
                 <Link
                     to={`/protocol/${encodeURIComponent(protocolId)}`}
                     className="text-xs underline decoration-dotted underline-offset-4 text-gray-700"

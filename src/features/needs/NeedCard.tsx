@@ -85,7 +85,7 @@ export function NeedCard({
         return { expandedSuiteId, selectedProtocolId, sourceColumn };
     }, [location.pathname, searchParams, suites, standaloneProtocols]);
 
-    const { isFollowed, toggleFollow } = useFollowed(needId);
+    const { isFollowed, toggleFollow } = useFollowed(needId, "need");
 
     if (!need) return null;
 
@@ -102,7 +102,7 @@ export function NeedCard({
                     <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)}>
                         <Edit className="w-4 h-4 text-gray-500 hover:text-gray-900" />
                     </Button>
-                    <FollowEye subjectId={needId} label="Follow need" />
+                    <FollowEye subjectId={needId} kind="need" label="Follow need" />
                 </div>
             </header>
 
@@ -138,7 +138,7 @@ export function NeedCard({
                                 }
                             }}
                             activeItem={layoutState.expandedSuiteId}
-                            actionRenderer={(suiteId) => <FollowEye subjectId={suiteId} label="Follow suite" />}
+                            actionRenderer={(suiteId) => <FollowEye subjectId={suiteId} kind="suite" label="Follow suite" />}
                         />
                     )}
 
@@ -156,7 +156,7 @@ export function NeedCard({
                                 }
                             }}
                             activeItem={layoutState.selectedProtocolId}
-                            actionRenderer={(pid) => <FollowEye subjectId={pid} label="Follow protocol" />}
+                            actionRenderer={(pid) => <FollowEye subjectId={pid} kind="protocol" label="Follow protocol" />}
                         />
                     )}
 

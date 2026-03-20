@@ -178,10 +178,48 @@ export class AppViewAdapter implements RPReadPort {
     // Stubs to fulfill RPReadPort TS Requirements
     // ----------------------------------------------------
     async listSections() { return []; }
-    async getNeedsBySection() { return []; }
+    async getNeedsBySection(sectionId: string): Promise<Need[]> {
+        try {
+            const need = await this.getNeedByLineageId(sectionId);
+            if (need) return [need];
+        } catch (err) { console.error("AppView getNeedsBySection error:", err); }
+        return [];
+    }
     async getNeedTree() { return { id: "draft-nd-a", version: "1.0", stage: "stable", date: "", need: { id: "a" } as Need, suites: [] as Suite[] } as unknown as NeedNode; }
     async getNeedByVersion() { return null; }
-    async getProtocolsForNeed() { return []; }
+    async getProtocolsForNeed(needId: string): Promise<Protocol[]> {
+        try {
+            const needData = await xrpc('app.rp.entity.getCurrent', { lineageId: needId });
+            if (!needData?.record) return [];
+
+            const bundledRels = needData.record.bundledRelations || [];
+            let protoIds = bundledRels.filter((r: any) => r.type === 'protocolRef').map((r: any) => r.lineageId);
+            
+            if (protoIds.length === 0 && needData.record.relations?.relatedProtocols?.length > 0) {
+                protoIds = needData.record.relations.relatedProtocols.map((p: any) => p.uri.split("/").pop());
+            }
+
+            const protos: Protocol[] = [];
+            for (const pid of protoIds) {
+                const pData = await xrpc('app.rp.entity.getCurrent', { lineageId: pid });
+                if (pData?.record) {
+                    const p = pData.record;
+                    protos.push({
+                        id: p.slug || p.lineageId || p.uri || "",
+                        lineageId: p.lineageId || p.uri || "",
+                        slug: p.slug || p.lineageId || "",
+                        title: p.title || "Untitled Protocol",
+                        summary: p.summary || p.description || "",
+                        body: p.protocolBody || p.body || ""
+                    });
+                }
+            }
+            return protos;
+        } catch (error) {
+            console.error("AppView getProtocolsForNeed error:", error);
+            return [];
+        }
+    }
     
     async getSuiteWithActiveMerge(id: string) {
         return this.getSuite(id);

@@ -170,7 +170,7 @@ export default function SuiteEditorProfile({
                 // Track creation Follows safely via validated Lineage IDs
                 const generated = await repo.getSuite(sid);
                 if (generated) {
-                    await repo.follow(generated.lineageId).catch(e => console.warn("Failed automatic self-follow:", e));
+                    await repo.follow(generated.lineageId, "suite").catch(e => console.warn("Failed automatic self-follow:", e));
                     if (targetStage !== 'draft' && repo.promoteSuiteVersion) {
                         await repo.promoteSuiteVersion(generated.lineageId, "0.1.0", targetStage as any);
                     }

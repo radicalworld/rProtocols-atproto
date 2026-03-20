@@ -59,18 +59,18 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
         .map((r: any) => ({
             id: r.uri,
             verb: r.value.verb,
-            subjectId: r.value?.subject?.uri,
+            subjectId: r.value?.subject?.lineageId || r.value?.subject?.uri,
             status: r.value?.status ?? "active",
             context: r.value?.context,
             createdAt: r.value?.createdAt ?? new Date().toISOString(),
-            subjectKind: "protocol", // assuming protocol for now since rProtocols marks protocols
-            subjectLineageId: r.value?.subject?.uri,
-            subjectRootId: r.value?.subject?.uri,
+            subjectKind: r.value?.subject?.kind || "protocol",
+            subjectLineageId: r.value?.subject?.lineageId || r.value?.subject?.uri,
+            subjectRootId: r.value?.subject?.lineageId || r.value?.subject?.uri,
             actorDid: this.viewerDid ?? "",
         }));
     }
     
-    async follow(subjectId: string): Promise<void> {
+    async follow(subjectId: string, kind: "need" | "protocol" | "suite"): Promise<void> {
         if (!this.viewerDid) return;
         await this.agent.com.atproto.repo.createRecord({
             repo: this.viewerDid,
@@ -78,19 +78,23 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
             record: {
                 $type: NS.mark,
                 verb: "follow",
-                subject: { $type: "com.atproto.repo.strongRef", uri: subjectId, cid: "" },
+                subject: {
+                    kind,
+                    lineageId: subjectId,
+                    pinMode: "floating-stable"
+                },
                 status: "active",
                 createdAt: new Date().toISOString()
             }
         });
     }
 
-    async unfollow(subjectId: string): Promise<void> {
+    async unfollow(subjectId: string, kind: "need" | "protocol" | "suite"): Promise<void> {
         if (!this.viewerDid) return;
         // find a follow mark for this subject
         const recs = await listAll(this.agent, this.viewerDid, NS.mark);
         const hit = recs.find(
-            (r: any) => r.value?.verb === "follow" && r.value?.subject?.uri === subjectId
+            (r: any) => r.value?.verb === "follow" && r.value?.subject?.lineageId === subjectId
         );
         if (!hit) return;
         // at://did/collection/rkey  -> rkey is last segment
@@ -103,7 +107,7 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
         });
     }
 
-    async adopt(subjectId: string, context?: string): Promise<void> {
+    async adopt(subjectId: string, kind: "need" | "protocol" | "suite", context?: string): Promise<void> {
         if (!this.viewerDid) return;
         await this.agent.com.atproto.repo.createRecord({
             repo: this.viewerDid,
@@ -111,7 +115,11 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
             record: {
                 $type: "org.rp.mark",
                 verb: "adopt",
-                subject: { $type: "com.atproto.repo.strongRef", uri: subjectId, cid: "" },
+                subject: {
+                    kind,
+                    lineageId: subjectId,
+                    pinMode: "floating-stable"
+                },
                 context,
                 status: "active",
                 createdAt: new Date().toISOString(),
@@ -119,11 +127,11 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
         });
     }
 
-    async unadopt(subjectId: string): Promise<void> {
+    async unadopt(subjectId: string, kind: "need" | "protocol" | "suite"): Promise<void> {
         if (!this.viewerDid) return;
         const recs = await listAll(this.agent, this.viewerDid, "org.rp.mark");
         const hit = recs.find(
-            (r: any) => r.value?.verb === "adopt" && r.value?.subject?.uri === subjectId
+            (r: any) => r.value?.verb === "adopt" && r.value?.subject?.lineageId === subjectId
         );
         if (!hit) return;
         const uri: string = hit.uri;

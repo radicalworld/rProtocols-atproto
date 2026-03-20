@@ -44,7 +44,7 @@ export function SuiteContents({ suiteId, suiteSlug, onSelectProtocol }: { suiteI
             </div>
             {p.summary && <div className="text-xs text-gray-600">{p.summary}</div>}
           </div>
-          <FollowEye subjectId={p.id} label="Follow protocol" />
+          <FollowEye subjectId={p.id} kind="protocol" label="Follow protocol" />
         </li>
       ))}
     </ul>

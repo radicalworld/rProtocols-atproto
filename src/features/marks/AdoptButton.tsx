@@ -4,8 +4,8 @@ import { useAdopted } from "./useAdopted";
 /**
  * Stylized Adopt button: light gray when inactive, green when adopted.
  */
-export function AdoptButton({ subjectId, label, disabled, variant = "pill" }: { subjectId: string; label?: string; disabled?: boolean; variant?: "pill" | "circle" }) {
-    const { adopted, toggleAdopt } = useAdopted(subjectId);
+export function AdoptButton({ subjectId, kind, label, disabled, variant = "pill" }: { subjectId: string; kind: "need" | "protocol" | "suite"; label?: string; disabled?: boolean; variant?: "pill" | "circle" }) {
+    const { adopted, toggleAdopt } = useAdopted(subjectId, kind);
 
     const baseClasses = "inline-flex items-center justify-center transition-colors border";
     const shapeClasses = variant === "circle" 

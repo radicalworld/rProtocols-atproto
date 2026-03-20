@@ -41,11 +41,11 @@ export function SuiteProfile({ suiteId: propId }: { suiteId?: string } = {}) {
   }, [id, repo, isEditing]);
 
 
-  const { isFollowed } = useFollowed(suite?.lineageId ?? "");
+  const { isFollowed } = useFollowed(suite?.lineageId ?? "", "suite");
   const baseFollow = suite?.followCount ?? 0;
   const followCount = isFollowed && baseFollow === 0 ? 1 : baseFollow;
 
-  const { adopted: isAdopted } = useAdopted(suite?.lineageId ?? "");
+  const { adopted: isAdopted } = useAdopted(suite?.lineageId ?? "", "suite");
   const baseAdopt = suite?.adoptCount ?? 0;
   const adoptCount = isAdopted && baseAdopt === 0 ? 1 : baseAdopt;
 
@@ -82,6 +82,7 @@ export function SuiteProfile({ suiteId: propId }: { suiteId?: string } = {}) {
               <div className="flex items-center gap-2 shrink-0 mt-1">
                 <ProfileActions 
                     subjectId={suite.lineageId} 
+                    kind="suite"
                     editUrl="edit" 
                     newUrl={`/${sectionId}/suites/new`}
                     editTitle="Edit Suite" 
@@ -135,7 +136,7 @@ export function SuiteProfile({ suiteId: propId }: { suiteId?: string } = {}) {
                                 {p.title}
                             </Link>
                             <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <FollowEye subjectId={p.id} label="Follow protocol" />
+                                <FollowEye subjectId={p.id} kind="protocol" label="Follow protocol" />
                             </div>
                         </div>
                         {p.summary && <div className="text-xs text-gray-500 leading-relaxed line-clamp-3">{p.summary}</div>}

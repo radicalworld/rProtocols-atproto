@@ -147,7 +147,7 @@ export default function ProtocolEditorProfile({
                 
                 // Automatically set the author to follow their new creation
                 const gen = await repo.getProtocol(pid);
-                if (gen) await repo.follow(gen.lineageId);
+                if (gen) await repo.follow(gen.lineageId, "protocol");
                 
                 setIsSaveModalOpen(false);
                 setMsg("✅ Protocol created! Redirecting...");
