@@ -1,24 +1,27 @@
 // src/features/needs/NeedProfile.tsx
 import { useEffect, useMemo, useState } from "react";
-import { useParams, Navigate, useNavigate } from "react-router-dom";
+import { useParams, Navigate, useNavigate, useLocation, Link } from "react-router-dom";
 import { useRepo } from "@/domain/repo";
 import type { Need } from "@/domain/types";
-import { FollowEye } from "@/features/marks/FollowEye";
+import { ProfileActions } from "@/features/marks/ProfileActions";
 import { useFollowed } from "@/features/marks/useFollowed";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { parseVersion, STAGE_DISPLAY_MAP, formatVersion } from "@/lib/version";
 import { getNeedRelease, latestNeedVersion, listNeedReleases } from "@/features/needs/lib/releases";
-import NeedBadge from "@/features/needs/components/NeedBadge";
 import { NeedVersionSwitcher } from "@/features/needs/components/NeedVersionSwitcher";
-import { useNeed, useNeedReleases } from "@/features/needs/hooks";
-import { Button } from "@/components/ui/button";
+import { VersionHeader } from "@/components/VersionHeader";
+import { NeedIcon } from "@/components/icons/NeedIcon";
 import { Edit } from "lucide-react";
 import { useSession } from "@/features/auth/SessionProvider";
+import NeedEditorProfile from "@/features/needs/components/NeedEditorProfile";
 
 export function NeedProfile() {
   const { rootId = "", version: paramVersion } = useParams();
   const nav = useNavigate();
+  const location = useLocation();
+  const sectionId = location.pathname.split("/")[1] || "collaboration";
+  const isEditing = location.pathname.endsWith("/edit");
   const repo = useRepo();
   const { session } = useSession();
   const [n, setN] = useState<Need | null>(null);
@@ -54,144 +57,133 @@ export function NeedProfile() {
   if (!n) return <div className="mx-auto max-w-3xl p-6">Loading need…</div>;
 
   // version info
-  const selectedVersion = parsed.ver ?? paramVersion ?? latestNeedVersion(n.lineageId) ?? "1.0";
+  const selectedVersion = parsed.ver ?? paramVersion ?? (n as any).version ?? latestNeedVersion(n.lineageId) ?? "0.1.0";
   const release = getNeedRelease(n.lineageId, selectedVersion);
   const versionString = release?.version ?? selectedVersion;
-  const { major, minor } = parseVersion(versionString);
-  const uiStage = release?.stage ?? (major === 0 ? "draft" : "stable");
+  const { major } = parseVersion(versionString);
+  const uiStage = release?.stage ?? (n as any).stage ?? (major === 0 ? "draft" : "stable");
 
   const uiStageDisplay = STAGE_DISPLAY_MAP[uiStage] || uiStage;
 
   // data normalization
   const description = release?.description ?? n.description ?? "";
   const purpose = release?.purpose ?? n.purpose ?? "";
-  const tags = release?.tags ?? [];
-  const language = release?.language ?? "";
+  const tags = release?.tags?.length ? release.tags : ((n as any).tags ?? []);
+  const language = release?.language || n.language || "en";
   
   const baseFollow = release?.followCount ?? 0;
   const followCount = isFollowed && baseFollow === 0 ? 1 : baseFollow;
   
-  const shortUrl = release?.shortUrl;
-  const qrCode = release?.qrCode;
-  const attribution = release?.attribution ?? [];
-  const history = release?.history ?? [];
   const date = release?.date ?? "";
   const versions = listNeedReleases(n.lineageId);
 
   return (
-    <article className="mx-auto max-w-3xl space-y-6 p-6">
-      <header className="flex flex-col gap-2">
-        <div className="flex items-start justify-between">
-          <h1 className="text-2xl font-semibold">{n.title}</h1>
-          <div className="flex items-center gap-2">
-            {session && (
-            <Button variant="outline" size="sm" onClick={() => nav(`/needs/${encodeURIComponent(n.lineageId)}/edit`)}>
-              <Edit className="w-4 h-4 mr-2" />
-              Edit Option
-            </Button>
-            )}
-            <FollowEye subjectId={n.lineageId} label="Follow need" />
-          </div>
-        </div>
-
-        {/* badges + version switcher */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <NeedBadge version={`v${versionString}`} stage="stable" />
-            <NeedBadge version={uiStageDisplay} stage={uiStage === "stable" ? "stable" : uiStage as any} />
-          </div>
-          {versions.length > 0 && (
-            <NeedVersionSwitcher
-              rootId={ rootId }
-              currentVersion={ release.version }
-              onChange={(v) => nav(`/needs/${rootId}/v/${v}`)}
-            />
-          )}
-        </div>
-      </header>
-
-      {purpose && <p className="text-gray-700 italic">{purpose}</p>}
-
-      {/* Meta info */}
-      <section className="mt-4 rounded-lg border border-gray-100 bg-gray-50/50 p-3 text-sm leading-relaxed">
-        <div className="flex flex-wrap gap-x-8 gap-y-3">
-          <div>
-            <div className="font-medium text-gray-900">Release</div>
-            <div>
-              v{formatVersion(versionString)}
-              {date ? ` · ${date}` : ""}
-              {language ? ` · ${language}` : ""}
-            </div>
-          </div>
-          <div>
-            <div className="font-medium text-gray-900">Signals</div>
-            <div>Follows: {followCount}</div>
-          </div>
-          {!!tags.length && (
-            <div>
-              <div className="font-medium text-gray-900">Tags</div>
-              <div className="mt-1 flex flex-wrap gap-1.5">
-                {tags.map((t) => (
-                  <span key={t} className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-                    {t}
-                  </span>
-                ))}
+    <div className="mx-auto max-w-[1200px] space-y-6 lg:space-y-0 lg:grid lg:grid-cols-[1fr_350px] xl:grid-cols-[1fr_400px] lg:gap-8 animate-fade-in-up">
+      {/* Left Column: Editor or Content */}
+      <div className="space-y-6">
+        {isEditing ? (
+            <NeedEditorProfile rootId={parsed.slug} onClose={() => nav("..", { relative: "path" })} />
+        ) : (
+          <article className="space-y-6">
+            <header className="flex flex-col gap-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <NeedIcon className="text-gray-900 w-8 h-8 flex-shrink-0" />
+                  <h1 className="text-3xl font-bold tracking-tight text-gray-900">{n.title}</h1>
+                </div>
+                <div className="flex items-center gap-2 shrink-0 mt-1">
+                  <ProfileActions 
+                      subjectId={n.lineageId} 
+                      editUrl="edit" 
+                      newUrl={`/${sectionId}/needs/new`}
+                      editTitle="Edit Need" 
+                      followLabel="Follow need" 
+                      showAdopt={false} 
+                  />
+                </div>
               </div>
-            </div>
-          )}
-          {attribution.length > 0 && (
-            <div className="sm:col-span-2">
-              <div className="font-medium text-gray-900">Attribution</div>
-              <ul className="mt-1 space-y-1">
-                {attribution.map((a) => (
-                  <li key={a.did} className="text-xs text-gray-600">
-                    <span className="font-medium text-gray-800">{a.name}</span>{" "}
-                    <span className="font-mono">{a.did}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {history.length > 0 && (
-            <div className="sm:col-span-2">
-              <div className="font-medium text-gray-900">History</div>
-              <ul className="mt-1 space-y-0.5">
-                {history.map((h) => (
-                  <li key={h.version} className="text-xs text-gray-600">
-                    <span className="font-medium text-gray-800">v{h.version}</span>
-                    {h.date ? ` · ${h.date}` : ""}
-                    {h.note ? ` — ${h.note}` : ""}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      </section>
 
-      <div className="my-4 border-t border-gray-100" />
+              {/* badges + version switcher */}
+              <VersionHeader 
+                  versionString={versionString}
+                  uiStageDisplay={uiStageDisplay}
+                  uiStage={uiStage}
+                  language={language}
+                  switcher={
+                    <NeedVersionSwitcher
+                      rootId={ rootId }
+                      currentVersion={ release?.version ?? versionString }
+                      onChange={(v) => {
+                          const base = location.pathname.split("/v/")[0];
+                          nav(`${base}/v/${v}`);
+                      }}
+                    />
+                  }
+              />
+            </header>
 
-      {/* Body */}
-      {description ? (
-        <section 
-          className="prose max-w-none pt-2 
-          prose-p:text-sm prose-p:text-gray-700 prose-p:leading-normal prose-p:mb-3
-          prose-headings:text-gray-900 prose-headings:font-semibold prose-headings:mt-6 prose-headings:mb-2
-          prose-h1:text-lg prose-h2:text-base prose-h3:text-sm
-          prose-ul:list-disc prose-ol:list-decimal prose-ul:pl-5 prose-ol:pl-5 prose-li:text-sm prose-li:text-gray-700 prose-li:mb-1.5
-          prose-strong:text-gray-900 prose-strong:font-semibold
-          prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline
-          marker:text-gray-400 dark:prose-invert"
-        >
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{description}</ReactMarkdown>
+            {purpose && <p className="text-lg text-gray-600 leading-relaxed italic">{purpose}</p>}
+
+            <div className="my-4 border-t border-gray-100" />
+
+            {/* Body */}
+            {description ? (
+              <section 
+                className="prose max-w-none pt-2 
+                prose-p:text-sm prose-p:text-gray-700 prose-p:leading-normal prose-p:mb-3
+                prose-headings:text-gray-900 prose-headings:font-semibold prose-headings:mt-6 prose-headings:mb-2
+                prose-h1:text-lg prose-h2:text-base prose-h3:text-sm
+                prose-ul:list-disc prose-ol:list-decimal prose-ul:pl-5 prose-ol:pl-5 prose-li:text-sm prose-li:text-gray-700 prose-li:mb-1.5
+                prose-strong:text-gray-900 prose-strong:font-semibold
+                prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline
+                marker:text-gray-400 dark:prose-invert"
+              >
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{description}</ReactMarkdown>
+              </section>
+            ) : (
+              <div className="text-sm text-gray-500">No description provided yet.</div>
+            )}
+
+            <footer className="mt-6 border-t border-gray-100 pt-3 text-sm italic text-gray-500 text-center">
+              This need evolves as we learn together.
+            </footer>
+          </article>
+        )}
+      </div>
+
+      {/* Right Column */}
+      <div className="hidden lg:block space-y-6 lg:sticky lg:top-0 lg:self-start pt-6 lg:pt-0">
+        <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm text-sm leading-relaxed">
+            <h3 className="font-semibold text-gray-900 mb-4 border-b pb-2">Need Details</h3>
+            <div className="flex flex-col gap-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="text-sm text-gray-600">
+                        <div className="font-medium text-gray-900">Release</div>
+                        <div>v{formatVersion(versionString)}{date ? ` · ${date}` : ""}{language ? ` · ${language}` : ""}</div>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                        <div className="font-medium text-gray-900">Signals</div>
+                        <div className="flex items-center gap-4">
+                            <span title="Followers">Follows: {followCount}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {!!tags.length && (
+                    <div>
+                        <div className="text-sm font-medium text-gray-900">Tags</div>
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                            {tags.map((t) => (
+                                <span key={t} className="rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-700 font-medium">
+                                    {t}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
         </section>
-      ) : (
-        <div className="text-sm text-gray-500">No description provided yet.</div>
-      )}
-
-      <footer className="mt-6 border-t border-gray-100 pt-3 text-sm italic text-gray-500 text-center">
-        This need evolves as we learn together.
-      </footer>
-    </article>
+      </div>
+    </div>
   );
 }

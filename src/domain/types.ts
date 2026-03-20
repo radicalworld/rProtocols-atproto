@@ -42,10 +42,22 @@ export type VersionRange = {
 // ==============================
 export interface NeedRecord {
     $type: "org.rp.need";
+    family?: {
+        id: string;
+        origin: StrongRef;
+    };
     lineage: Lineage;
     slug: string;
     version: VersionString;
     stage: Stage;
+    release?: {
+        kind: "genesis" | "update" | "fork";
+        bump: "major" | "minor" | "patch";
+    };
+    familyEvent?: {
+        type: "candidate-major-fork";
+        status: "pending";
+    };
     createdAt: string;
     language: string;
     authorship: { authorDid: string };
@@ -70,10 +82,22 @@ export interface NeedRecord {
 
 export interface ProtocolRecord {
     $type: "org.rp.protocol";
+    family?: {
+        id: string;
+        origin: StrongRef;
+    };
     lineage: Lineage;
     slug: string;
     version: VersionString;
     stage: Stage;
+    release?: {
+        kind: "genesis" | "update" | "fork";
+        bump: "major" | "minor" | "patch";
+    };
+    familyEvent?: {
+        type: "candidate-major-fork";
+        status: "pending";
+    };
     createdAt: string;
     language: string;
     authorship: { authorDid: string };
@@ -101,10 +125,22 @@ export interface ProtocolRecord {
 
 export interface SuiteRecord {
     $type: "org.rp.suite";
+    family?: {
+        id: string;
+        origin: StrongRef;
+    };
     lineage: Lineage;
     slug: string;
     version: VersionString;
     stage: Stage;
+    release?: {
+        kind: "genesis" | "update" | "fork";
+        bump: "major" | "minor" | "patch";
+    };
+    familyEvent?: {
+        type: "candidate-major-fork";
+        status: "pending";
+    };
     createdAt: string;
     language: string;
     authorship: { authorDid: string };
@@ -131,9 +167,10 @@ export interface MarkRecord {
     
     subject: {
         kind: "need" | "protocol" | "suite";
-        lineageId: string;
+        familyId?: string;
+        lineageId?: string;
         versionRef?: StrongRef;
-        pinMode: "exact" | "floating-stable";
+        pinMode: "exact" | "floating-lineage-stable" | "floating-family-stable";
     };
 
     context?: string;
@@ -148,6 +185,10 @@ export interface MarkRecord {
 // Canonical Need (Life Need) (CID'ed content)
 export interface Need {
     id: string; // SQLite URI or mock ID
+    family?: {
+        id: string;
+        origin: StrongRef;
+    };
     lineageId: string; // The opaque rp_nd_id
     slug: string;      // The human readable string
 
@@ -212,6 +253,10 @@ export interface NeedRelease {
 
 export interface Suite {
   id: string;
+  family?: {
+      id: string;
+      origin: StrongRef;
+  };
   lineageId: SuiteId;
   slug: string;
   version?: string;
@@ -236,6 +281,10 @@ export interface Suite {
 
 export interface Protocol {
   id: string; // the uri
+  family?: {
+      id: string;
+      origin: StrongRef;
+  };
   lineageId: ProtocolRootId;
   slug: string;
   

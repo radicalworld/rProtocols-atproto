@@ -10,6 +10,9 @@ import { NeedProfile } from "@/features/needs/components/NeedProfile";
 import ProtocolEditorProfile from "@/features/protocols/components/ProtocolEditorProfile";
 import NeedEditorProfile from "@/features/needs/components/NeedEditorProfile";
 import SuiteEditorProfile from "@/features/suites/SuiteEditorProfile";
+import { SuiteIcon } from "@/components/icons/SuiteIcon";
+import { ProtocolIcon } from "@/components/icons/ProtocolIcon";
+import { NeedIcon } from "@/components/icons/NeedIcon";
 
 export function SectionPage({ section }: { section: SectionId }) {
     const nav = useNavigate();
@@ -61,7 +64,17 @@ export function SectionPage({ section }: { section: SectionId }) {
                         </aside>
                     </div>
                 } />
-                <Route path="needs/new" element={<NeedEditorProfile isNew={true} parentLineageId={section} />} />
+                <Route path="needs/new" element={
+                    <div className="mx-auto max-w-[1200px] lg:grid lg:grid-cols-[1fr_350px] xl:grid-cols-[1fr_400px] lg:gap-8">
+                        <NeedEditorProfile isNew={true} parentLineageId={section} />
+                        <aside className="hidden lg:block space-y-6">
+                            <div className="rounded-2xl border bg-gray-50/80 p-5 shadow-sm border-dashed border-gray-200">
+                                <p className="text-gray-500 mb-2 font-medium">Genesis Record</p>
+                                <p className="text-sm text-gray-500">You are authoring a new root atomic graph node. Metadata analytics will unlock upon successful PDS network broadcast.</p>
+                            </div>
+                        </aside>
+                    </div>
+                } />
                 <Route path="suites/:suiteId/protocols/new" element={
                     <div className="mx-auto max-w-[1200px] lg:grid lg:grid-cols-[1fr_350px] xl:grid-cols-[1fr_400px] lg:gap-8">
                         <ProtocolEditorProfile isNew={true} parentNeedId={section} />
@@ -203,9 +216,12 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
         <div className="flex flex-col h-full py-2">
             {rootNeed && (
                 <div className="px-5 py-4 mb-2 border-b border-gray-100 flex items-center justify-between">
-                    <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
-                        {rootNeed.title}
-                    </h2>
+                    <div className="flex items-center gap-3">
+                        <NeedIcon className="w-5 h-5 text-gray-900" />
+                        <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
+                            {rootNeed.title}
+                        </h2>
+                    </div>
                 </div>
             )}
             
@@ -214,9 +230,12 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
                 {/* Suites Accordion */}
                 <details className="group" open={!needId && !protocolId}>
                     <summary className={detailsSummaryClass}>
-                        <span className="flex items-center gap-1.5">
-                            <svg className="w-3.5 h-3.5 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                            Suites <CountBubble count={suites.length} />
+                        <span className="flex items-center gap-2">
+                            <svg className="w-3.5 h-3.5 transition-transform group-open:rotate-90 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                            <div className="w-6 h-6 rounded-full border border-gray-200 bg-gray-50 shadow-sm flex items-center justify-center text-gray-500 group-hover:text-gray-900 group-hover:border-gray-300 transition-colors">
+                                <SuiteIcon className="w-3.5 h-3.5" />
+                            </div>
+                            <span className="font-bold text-gray-700">Suites</span> <CountBubble count={suites.length} />
                         </span>
                         {session && (
                         <button 
@@ -228,9 +247,9 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
                         </button>
                         )}
                     </summary>
-                    <div className="px-3 pb-2 space-y-1">
+                    <div className="ml-9 pl-3 pr-3 pb-2 space-y-1 border-l border-gray-100">
                         {suiteId === "new" && (
-                            <div className="block pl-6 pr-3 py-2.5 rounded-lg text-sm transition-colors bg-white text-blue-700 font-medium shadow-sm border border-gray-100">
+                            <div className="block pl-3 pr-3 py-2.5 rounded-lg text-sm transition-colors bg-white text-blue-700 font-medium shadow-sm border border-gray-100">
                                 New Suite...
                             </div>
                         )}
@@ -241,9 +260,10 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
                                 <Link 
                                     key={sId} 
                                     to={`/${section}/suites/${sId}`}
-                                    className={`block pl-6 pr-3 py-2.5 rounded-lg text-sm transition-colors ${isActive ? "bg-white text-blue-700 font-medium shadow-sm border border-gray-100" : "text-gray-700 hover:bg-white hover:shadow-sm border border-transparent"}`}
+                                    className={`flex items-center gap-2 pl-3 pr-3 py-2.5 rounded-lg text-sm transition-colors ${isActive ? "bg-white text-blue-700 font-medium shadow-sm border border-gray-100" : "text-gray-700 hover:bg-white hover:shadow-sm border border-transparent"}`}
                                 >
-                                    {s.title}
+                                    <SuiteIcon className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                                    <span className="truncate">{s.title}</span>
                                 </Link>
                             );
                         }) : (
@@ -255,9 +275,12 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
                 {/* Protocols Accordion */}
                 <details className="group" open={!!protocolId}>
                     <summary className={detailsSummaryClass}>
-                        <span className="flex items-center gap-1.5">
-                            <svg className="w-3.5 h-3.5 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                            Protocols <CountBubble count={protocols.length} />
+                        <span className="flex items-center gap-2">
+                            <svg className="w-3.5 h-3.5 transition-transform group-open:rotate-90 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                            <div className="w-6 h-6 rounded-full border border-gray-200 bg-gray-50 shadow-sm flex items-center justify-center text-gray-500 group-hover:text-gray-900 group-hover:border-gray-300 transition-colors">
+                                <ProtocolIcon className="w-3.5 h-3.5" />
+                            </div>
+                            <span className="font-bold text-gray-700">Protocols</span> <CountBubble count={protocols.length} />
                         </span>
                         {session && (
                         <button 
@@ -269,9 +292,9 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
                         </button>
                         )}
                     </summary>
-                    <div className="px-3 pb-2 space-y-1">
+                    <div className="ml-9 pl-3 pr-3 pb-2 space-y-1 border-l border-gray-100">
                         {protocolId === "new" && (
-                            <div className="block pl-6 pr-3 py-2.5 rounded-lg text-sm transition-colors bg-white text-blue-700 font-medium shadow-sm border border-gray-100">
+                            <div className="block pl-3 pr-3 py-2.5 rounded-lg text-sm transition-colors bg-white text-blue-700 font-medium shadow-sm border border-gray-100">
                                 New Protocol...
                             </div>
                         )}
@@ -284,9 +307,10 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
                                 <Link 
                                     key={p.id} 
                                     to={targetUrl}
-                                    className={`block pl-6 pr-3 py-2.5 rounded-lg text-sm transition-colors ${isActive ? "bg-white text-blue-700 font-medium shadow-sm border border-gray-100" : "text-gray-700 hover:bg-white hover:shadow-sm border border-transparent"}`}
+                                    className={`flex items-center gap-2 pl-3 pr-3 py-2.5 rounded-lg text-sm transition-colors ${isActive ? "bg-white text-blue-700 font-medium shadow-sm border border-gray-100" : "text-gray-700 hover:bg-white hover:shadow-sm border border-transparent"}`}
                                 >
-                                    {p.title}
+                                    <ProtocolIcon className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                                    <span className="truncate">{p.title}</span>
                                 </Link>
                             );
                         }) : (
@@ -298,9 +322,12 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
                 {/* Sub-needs Accordion */}
                 <details className="group" open={!!needId}>
                     <summary className={detailsSummaryClass}>
-                        <span className="flex items-center gap-1.5">
-                            <svg className="w-3.5 h-3.5 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                            Sub-Needs <CountBubble count={subNeeds.length} />
+                        <span className="flex items-center gap-2">
+                            <svg className="w-3.5 h-3.5 transition-transform group-open:rotate-90 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                            <div className="w-6 h-6 rounded-full border border-gray-200 bg-gray-50 shadow-sm flex items-center justify-center text-gray-500 group-hover:text-gray-900 group-hover:border-gray-300 transition-colors">
+                                <NeedIcon className="w-3.5 h-3.5" />
+                            </div>
+                            <span className="font-bold text-gray-700">Sub-Needs</span> <CountBubble count={subNeeds.length} />
                         </span>
                         {session && (
                         <button 
@@ -312,9 +339,9 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
                         </button>
                         )}
                     </summary>
-                    <div className="px-3 pb-2 space-y-1">
+                    <div className="ml-9 pl-3 pr-3 pb-2 space-y-1 border-l border-gray-100">
                         {needId === "new" && (
-                            <div className="block pl-6 pr-3 py-2.5 rounded-lg text-sm transition-colors bg-white text-blue-700 font-medium shadow-sm border border-gray-100">
+                            <div className="block pl-3 pr-3 py-2.5 rounded-lg text-sm transition-colors bg-white text-blue-700 font-medium shadow-sm border border-gray-100">
                                 New Sub-Need...
                             </div>
                         )}
@@ -324,9 +351,10 @@ function ContextSidebar({ section, suiteId, protocolId, needId }: { section: Sec
                                 <Link 
                                     key={n.lineageId} 
                                     to={`/${section}/needs/${n.lineageId}`}
-                                    className={`block pl-6 pr-3 py-2.5 rounded-lg text-sm transition-colors ${isActive ? "bg-white text-blue-700 font-medium shadow-sm border border-gray-100" : "text-gray-700 hover:bg-white hover:shadow-sm border border-transparent"}`}
+                                    className={`flex items-center gap-2 pl-3 pr-3 py-2.5 rounded-lg text-sm transition-colors ${isActive ? "bg-white text-blue-700 font-medium shadow-sm border border-gray-100" : "text-gray-700 hover:bg-white hover:shadow-sm border border-transparent"}`}
                                 >
-                                    {n.title}
+                                    <NeedIcon className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                                    <span className="truncate">{n.title}</span>
                                 </Link>
                             );
                         }) : (

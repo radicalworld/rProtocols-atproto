@@ -1,12 +1,13 @@
 import { useEffect, useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useProtocolEditor } from "@/features/protocols/hooks/useProtocolEditor";
 import { useRepo } from "@/domain/repo";
 import TiptapEditor from "@/components/ui/TiptapEditor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { X } from "lucide-react";
-import ProtocolBadge from "@/features/protocols/components/ProtocolBadge";
-import { STAGE_DISPLAY_MAP, formatVersion } from "@/lib/version";
+import { X, UserCircle2 } from "lucide-react";
+import { formatVersion, STAGE_DISPLAY_MAP } from "@/lib/version";
+import { VersionHeader } from "@/components/VersionHeader";
+import { ProtocolIcon } from "@/components/icons/ProtocolIcon";
 
 export default function ProtocolEditorProfile({
     protocolId: propRootId,
@@ -33,8 +34,10 @@ export default function ProtocolEditorProfile({
     const [saving, setSaving] = useState(false);
     
     // Modal State
+    const [searchParams] = useSearchParams();
+    const isFork = searchParams.get("fork") === "true";
     const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
-    const [targetVersionType, setTargetVersionType] = useState<"patch" | "minor" | "major">("patch");
+    const [targetVersionType, setTargetVersionType] = useState<"patch" | "minor" | "major">(isFork ? "major" : "patch");
     const [targetStage, setTargetStage] = useState<"draft" | "candidate" | "stable" | "deprecated">("draft");
 
     const [msg, setMsg] = useState("");
@@ -53,11 +56,32 @@ export default function ProtocolEditorProfile({
             });
             // Setup defaults for Modal
             setTargetStage(draft.stage as any);
-            setTargetVersionType("patch");
+            setTargetVersionType(isFork ? "major" : "patch");
 
             requestAnimationFrame(() => setIsInitialized(true));
         }
-    }, [draft]);
+    }, [draft, isFork]);
+
+    // Clone parent data natively if Genesis Fork
+    const forkFrom = searchParams.get("forkFrom");
+    useEffect(() => {
+        let alive = true;
+        (async () => {
+            if (isNew && forkFrom) {
+                const parent = await repo.getProtocol(decodeURIComponent(forkFrom));
+                if (!alive || !parent) return;
+                setForm(prev => ({
+                    ...prev,
+                    title: parent.title || "",
+                    summary: parent.summary || "",
+                    body: parent.body || "",
+                    language: parent.language || "en",
+                    tags: parent.tags ? (Array.isArray(parent.tags) ? parent.tags.join(", ") : parent.tags) : "",
+                }));
+            }
+        })();
+        return () => { alive = false; };
+    }, [isNew, forkFrom, repo]);
 
     // Derived Versions for Modal
     const currentVer = draft?.version || "1.0.0";
@@ -73,6 +97,7 @@ export default function ProtocolEditorProfile({
 
     const isStageBump = !isNew && draft && targetStage !== draft.stage;
     const isFirstActive = major === 0 && targetStage === 'stable';
+    const showMajor = isFirstActive || isFork;
 
     useEffect(() => {
         if (isStageBump && targetVersionType === 'patch') {
@@ -112,8 +137,9 @@ export default function ProtocolEditorProfile({
                     title: form.title || "Untitled Protocol",
                     summary: form.summary,
                     body: form.body,
-                    tags: form.tags.split(",").map(t => t.trim()).filter(Boolean),
-                    language: form.language || "en"
+                    tags: Array.isArray(form.tags) ? form.tags : form.tags.split(",").map(t => t.trim()).filter(Boolean),
+                    language: form.language || "en",
+                    forkFrom: forkFrom || undefined
                 });
                 if (parentNeedId) {
                     await repo.linkProtocolServesNeed(pid, parentNeedId);
@@ -149,45 +175,52 @@ export default function ProtocolEditorProfile({
     }
 
     return (
-        <div className="mx-auto max-w-3xl p-6 space-y-4 animate-fade-in-up">
-            <header className="flex items-start justify-between">
-                <div>
-                    <h1 className="text-2xl font-semibold">{isNew ? "Create Protocol" : "Edit Protocol"}</h1>
-                    <div className="text-sm text-gray-500 mt-1">
-                        {isNew ? (
-                            <span className="flex items-center gap-2">
-                                <span className="font-semibold text-gray-700">Root Context:</span> 
-                                <span className="uppercase tracking-wider">{parentNeedId || "None"}</span>
-                            </span>
-                        ) : (
-                            <div className="flex items-center gap-2 mt-2">
-                                <ProtocolBadge version={`v${formatVersion(draft.version)}`} stage="stable" />
-                                <ProtocolBadge version={STAGE_DISPLAY_MAP[draft.stage as string] || draft.stage} stage={draft.stage as any} />
-                                <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 border border-gray-200 uppercase tracking-wider">
-                                    {draft.language || "EN"}
-                                </span>
-                                {latest && latest !== draft.version && <span className="ml-2 text-xs italic text-gray-500">(latest is v{formatVersion(latest)})</span>}
-                            </div>
+        <div className="p-6 space-y-4 animate-fade-in-up">
+            <header className="flex flex-col gap-4 border-b pb-4">
+                <div className="mx-auto max-w-3xl w-full flex items-start justify-between">
+                    <div className="flex items-start gap-3">
+                        <ProtocolIcon className="text-gray-900 w-8 h-8 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <h1 className="text-2xl font-semibold">{isNew ? "Create Protocol" : "Edit Protocol"}</h1>
+                            {isNew && (
+                                <div className="text-sm text-gray-500 mt-1">
+                                    <span className="flex items-center gap-2">
+                                        <span className="font-semibold text-gray-700">Parent Context:</span> 
+                                        <span className="uppercase tracking-wider">{parentNeedId || "None"}</span>
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setIsSaveModalOpen(true)}
+                            disabled={!hasChanges}
+                            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50"
+                        >
+                            {isNew ? "Create" : "Publish"}
+                        </button>
+                        {onClose && (
+                            <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-500 rounded-full hover:bg-gray-100 transition-colors">
+                                <X className="h-5 w-5" />
+                            </button>
                         )}
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setIsSaveModalOpen(true)}
-                        disabled={!hasChanges}
-                        className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white shadow hover:bg-blue-700 transition focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        Publish
-                    </button>
-                    {onClose && (
-                        <button onClick={onClose} aria-label="Close Editor" className="rounded-lg p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors ml-1">
-                            <X className="w-5 h-5" />
-                        </button>
-                    )}
-                </div>
+
+                {!isNew && (
+                    <div className="mx-auto max-w-3xl -mb-2">
+                        <VersionHeader 
+                            versionString={draft.version!}
+                            uiStageDisplay={STAGE_DISPLAY_MAP[targetStage as string] || targetStage}
+                            uiStage={targetStage}
+                            language={form.language}
+                        />
+                    </div>
+                )}
             </header>
 
-            <label className="block" htmlFor="protocol-title">
+            <label className="mx-auto max-w-3xl block" htmlFor="protocol-title">
                 <div className="text-sm font-medium text-gray-700">Title {isNew ? "" : <span className="text-xs text-gray-400 font-normal ml-1">(Locked)</span>}</div>
                 <input
                     id="protocol-title"
@@ -301,7 +334,7 @@ export default function ProtocolEditorProfile({
                                             <span className="block text-xs text-gray-500">Adds detail or improves the protocol without changing its direction.</span>
                                         </span>
                                     </label>
-                                    {isFirstActive && (
+                                    {showMajor && (
                                         <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition ${targetVersionType === 'major' ? 'border-amber-500 bg-amber-50' : 'hover:bg-gray-50'}`}>
                                             <input 
                                                 type="radio" 
@@ -312,8 +345,8 @@ export default function ProtocolEditorProfile({
                                                 className="h-4 w-4 text-amber-600" 
                                             />
                                             <span className="ml-3 block">
-                                                <span className="block text-sm font-medium text-amber-900">Official Release (v{nextMajor})</span>
-                                                <span className="block text-xs text-amber-700/80">Promotes this experimental blueprint to a structurally certified protocol.</span>
+                                                <span className="block text-sm font-medium text-amber-900">New Version (v{nextMajor})</span>
+                                                <span className="block text-xs text-amber-700/80">Creates a distinct, independent branch of this protocol.</span>
                                             </span>
                                         </label>
                                     )}

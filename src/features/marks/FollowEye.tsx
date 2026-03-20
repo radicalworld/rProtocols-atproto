@@ -2,8 +2,17 @@
 import { Eye } from "lucide-react";
 import { useFollowed } from "./useFollowed";
 
-export function FollowEye({ subjectId, label }: { subjectId: string; label?: string }) {
+export function FollowEye({ subjectId, label, variant = "pill" }: { subjectId: string; label?: string; variant?: "pill" | "circle" }) {
     const { isFollowed, toggleFollow } = useFollowed(subjectId);
+
+    const baseClasses = "inline-flex items-center justify-center transition-colors border";
+    const shapeClasses = variant === "circle" 
+        ? "rounded-full p-2" 
+        : "rounded-xl px-2 py-1 gap-1 text-xs";
+        
+    const colorClasses = isFollowed 
+        ? "bg-green-100 text-green-700 border-green-200 hover:bg-green-200" 
+        : "bg-transparent border-gray-200 text-gray-400 hover:text-gray-600 hover:border-gray-300";
 
     return (
         <button
@@ -11,12 +20,9 @@ export function FollowEye({ subjectId, label }: { subjectId: string; label?: str
             aria-pressed={isFollowed}
             aria-label={label ?? "Follow"}
             title={isFollowed ? "Following" : "Follow"}
-            className={`inline-flex items-center gap-1 rounded-xl border px-2 py-1 text-xs transition-colors
-                ${isFollowed 
-                    ? "bg-green-200 text-green-800 border-green-300 hover:bg-green-300" 
-                    : "bg-transparent border-gray-200 text-gray-400 hover:text-gray-600 hover:border-gray-300"}`}
+            className={`${baseClasses} ${shapeClasses} ${colorClasses}`}
             >
-            <Eye className={`h-3.5 w-3.5 ${isFollowed ? "text-green-800" : "text-gray-400"}`} />
+            <Eye className={`${variant === "circle" ? "h-4 w-4" : "h-3.5 w-3.5"} ${isFollowed ? "text-green-700" : "text-gray-400"}`} />
             <span className="sr-only">{isFollowed ? "Following" : "Follow"}</span>
         </button>
     );

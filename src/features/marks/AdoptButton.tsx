@@ -4,8 +4,19 @@ import { useAdopted } from "./useAdopted";
 /**
  * Stylized Adopt button: light gray when inactive, green when adopted.
  */
-export function AdoptButton({ subjectId, label, disabled }: { subjectId: string; label?: string; disabled?: boolean }) {
+export function AdoptButton({ subjectId, label, disabled, variant = "pill" }: { subjectId: string; label?: string; disabled?: boolean; variant?: "pill" | "circle" }) {
     const { adopted, toggleAdopt } = useAdopted(subjectId);
+
+    const baseClasses = "inline-flex items-center justify-center transition-colors border";
+    const shapeClasses = variant === "circle" 
+        ? "rounded-full p-2" 
+        : "rounded-xl px-2 py-1 gap-1 text-xs";
+        
+    const colorClasses = disabled
+        ? "bg-gray-50 border-gray-200 text-gray-300 cursor-not-allowed"
+        : adopted
+            ? "bg-green-100 text-green-700 border-green-200 hover:bg-green-200"
+            : "bg-transparent border-gray-200 text-gray-400 hover:text-gray-600 hover:border-gray-300";
 
     return (
         <button
@@ -14,17 +25,12 @@ export function AdoptButton({ subjectId, label, disabled }: { subjectId: string;
             aria-pressed={adopted}
             aria-label={label ?? "Adopt"}
             title={adopted ? "Adopted" : "Adopt"}
-            className={`inline-flex items-center gap-1 rounded-xl border px-2 py-1 text-xs transition-colors
-                ${disabled
-                    ? "bg-gray-50 border-gray-200 text-gray-300 cursor-not-allowed"
-                    : adopted
-                        ? "bg-green-200 text-green-800 border-green-300 hover:bg-green-300"
-                        : "bg-transparent border-gray-200 text-gray-400 hover:text-gray-600 hover:border-gray-300"}`}
+            className={`${baseClasses} ${shapeClasses} ${colorClasses}`}
                     >
             {adopted ? (
-                <CheckCircle className="h-3.5 w-3.5 text-green-800" />
+                <CheckCircle className={`${variant === "circle" ? "h-4 w-4" : "h-3.5 w-3.5"} text-green-700`} />
             ) : (
-                <Circle className="h-3.5 w-3.5 text-gray-400" />
+                <Circle className={`${variant === "circle" ? "h-4 w-4" : "h-3.5 w-3.5"} text-gray-400`} />
             )}
             <span className="sr-only">{adopted ? "Adopted" : "Adopt"}</span>
         </button>

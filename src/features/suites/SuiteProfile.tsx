@@ -2,23 +2,25 @@ import { useEffect, useState } from "react";
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { useRepo } from "@/domain/repo";
 import type { Suite, Protocol } from "@/domain/types";
+import { ProfileActions } from "@/features/marks/ProfileActions";
 import { FollowEye } from "@/features/marks/FollowEye";
-import { AdoptButton } from "@/features/marks/AdoptButton";
 import { STAGE_DISPLAY_MAP, formatVersion } from "@/lib/version";
 import ReactMarkdown from "react-markdown";
 import { useSession } from "@/features/auth/SessionProvider";
 import { Pencil } from "lucide-react";
 import SuiteEditorProfile from "@/features/suites/SuiteEditorProfile";
-import ProtocolBadge from "@/features/protocols/components/ProtocolBadge";
 import { useFollowed } from "@/features/marks/useFollowed";
 import { useAdopted } from "@/features/marks/useAdopted";
 import { latestSuiteVersion, getSuiteRelease, listSuiteReleases } from "@/features/suites/lib/releases";
 import { SuiteVersionSwitcher } from "@/features/suites/components/SuiteVersionSwitcher";
+import { SuiteIcon } from "@/components/icons/SuiteIcon";
+import { VersionHeader } from "@/components/VersionHeader";
 
 export function SuiteProfile({ suiteId: propId }: { suiteId?: string } = {}) {
   const { id: paramId = "", version: paramVersion } = useParams();
   const id = propId || paramId;
   const location = useLocation();
+  const sectionId = location.pathname.split("/")[1] || "collaboration";
   const nav = useNavigate();
   const repo = useRepo();
   const { session } = useSession();
@@ -73,34 +75,29 @@ export function SuiteProfile({ suiteId: propId }: { suiteId?: string } = {}) {
           <>
             <header className="flex flex-col gap-4">
             <div className="flex items-start justify-between">
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900">{contentTitle}</h1>
+              <div className="flex items-center gap-3">
+                <SuiteIcon className="text-gray-900 w-8 h-8 flex-shrink-0" />
+                <h1 className="text-3xl font-bold tracking-tight text-gray-900">{contentTitle}</h1>
+              </div>
               <div className="flex items-center gap-2 shrink-0 mt-1">
-                {session && (
-                    <Link
-                        to="edit"
-                        className="inline-flex items-center gap-1 rounded-xl border border-gray-200 px-2 py-1 text-xs text-gray-500 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-colors"
-                        title="Edit Suite"
-                    >
-                        <Pencil className="h-3.5 w-3.5" />
-                        <span className="sr-only">Edit Suite</span>
-                    </Link>
-                )}
-                <FollowEye subjectId={suite.lineageId} label="Follow suite" />
-                <AdoptButton subjectId={suite.lineageId} disabled={versionString.startsWith("0.")} />
+                <ProfileActions 
+                    subjectId={suite.lineageId} 
+                    editUrl="edit" 
+                    newUrl={`/${sectionId}/suites/new`}
+                    editTitle="Edit Suite" 
+                    followLabel="Follow suite" 
+                    showAdopt={true} 
+                    adoptDisabled={versionString.startsWith("0.")} 
+                />
               </div>
             </div>
 
-            <div className="flex items-center justify-between bg-gray-50/50 p-2 rounded-lg border border-gray-100">
-                <div className="flex items-center gap-2">
-                    <ProtocolBadge version={`v${formatVersion(versionString)}`} stage="stable" />
-                    <ProtocolBadge version={uiStageDisplay} stage={uiStage} />
-                    {language && (
-                        <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-600 border border-gray-200 uppercase tracking-widest">
-                            {language}
-                        </span>
-                    )}
-                </div>
-                {versions.length > 0 && (
+            <VersionHeader 
+                versionString={versionString}
+                uiStageDisplay={uiStageDisplay}
+                uiStage={uiStage}
+                language={language}
+                switcher={
                     <SuiteVersionSwitcher 
                         id={suite.lineageId} 
                         currentVersion={versionString} 
@@ -109,8 +106,8 @@ export function SuiteProfile({ suiteId: propId }: { suiteId?: string } = {}) {
                             nav(`${base}/versions/${v}`);
                         }} 
                     />
-                )}
-            </div>
+                }
+            />
           </header>
           
           {contentDescription && (

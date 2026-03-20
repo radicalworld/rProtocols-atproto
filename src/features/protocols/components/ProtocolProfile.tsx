@@ -3,6 +3,7 @@ import { useParams, Navigate, useMatch } from "react-router-dom";
 import { useRepo } from "@/domain/repo";
 import type { Protocol } from "@/domain/types";
 import { FollowEye } from "@/features/marks/FollowEye";
+import { ProfileActions } from "@/features/marks/ProfileActions";
 import { useFollowed } from "@/features/marks/useFollowed";
 import { AdoptButton } from "@/features/marks/AdoptButton";
 import { useAdopted } from "@/features/marks/useAdopted";
@@ -11,18 +12,20 @@ import remarkGfm from "remark-gfm";
 import { getRelease, latestVersion, listReleases } from "@/features/protocols/lib/releases";
 import { protocolReleases } from "@/data/releases";
 import { parseVersion, STAGE_DISPLAY_MAP, formatVersion } from "@/lib/version";
-import ProtocolBadge from "@/features/protocols/components/ProtocolBadge";
 import { ProtocolVersionSwitcher } from "@/features/protocols/components/ProtocolVersionSwitcher";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Pencil } from "lucide-react";
 import ProtocolEditorProfile from "@/features/protocols/components/ProtocolEditorProfile";
 import { useSession } from "@/features/auth/SessionProvider";
+import { VersionHeader } from "@/components/VersionHeader";
+import { ProtocolIcon } from "@/components/icons/ProtocolIcon";
 
 export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } = {}) {
     const { id: paramId = "", version: paramVersion } = useParams();
     const id = propId || paramId;
     const nav = useNavigate();
     const location = useLocation();
+    const sectionId = location.pathname.split("/")[1] || "collaboration";
     const isEditing = location.pathname.endsWith("/edit");
     const repo = useRepo();
     const { session } = useSession();
@@ -97,7 +100,7 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
     const tags = release?.tags ?? [];
     const purpose = release?.purpose ?? p.summary ?? "";
     const date = release?.date ?? "";
-    const language = release?.language ?? "";
+    const language = release?.language || p.language || "en";
     
     // Dynamically guarantee 0-state overrides if the active session proves network signals exist
     const baseFollow = release?.followCount ?? 0;
@@ -133,44 +136,39 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
                     <>
                         <header className="flex flex-col gap-4">
                             <div className="flex items-start justify-between">
-                            <h1 className="text-3xl font-bold tracking-tight text-gray-900">{p.title || release?.title}</h1>
+                            <div className="flex items-center gap-3">
+                                <ProtocolIcon className="text-gray-900 w-8 h-8 flex-shrink-0" />
+                                <h1 className="text-3xl font-bold tracking-tight text-gray-900">{p.title || release?.title}</h1>
+                            </div>
                             <div className="flex items-center gap-2 shrink-0 mt-1">
-                                {session && (
-                                <Link
-                                    to="edit"
-                                    className="inline-flex items-center gap-1 rounded-xl border border-gray-200 px-2 py-1 text-xs text-gray-500 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-colors"
-                                    title="Edit Protocol"
-                                >
-                                    <Pencil className="h-3.5 w-3.5" />
-                                    <span className="sr-only">Edit Protocol</span>
-                                </Link>
-                                )}
-                                <FollowEye subjectId={p.id} label="Follow protocol" />
-                                <AdoptButton subjectId={p.id} disabled={!canAdopt || versionString.startsWith("0.")} />
+                                <ProfileActions 
+                                    subjectId={p.id} 
+                                    editUrl="edit" 
+                                    newUrl={`/${sectionId}/protocols/new`}
+                                    editTitle="Edit Protocol" 
+                                    followLabel="Follow protocol" 
+                                    showAdopt={true} 
+                                    adoptDisabled={!canAdopt || versionString.startsWith("0.")} 
+                                />
                             </div>
                             </div>
 
-                            <div className="flex items-center justify-between bg-gray-50/50 p-2 rounded-lg border border-gray-100">
-                            <div className="flex items-center gap-2">
-                                <ProtocolBadge version={`v${formatVersion(versionString)}`} stage="stable" />
-                                <ProtocolBadge version={uiStageDisplay} stage={uiStage === "stable" ? "stable" : uiStage as any} />
-                                {language && (
-                                    <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-600 border border-gray-200 uppercase tracking-widest">
-                                        {language}
-                                    </span>
-                                )}
-                            </div>
-                            {versions.length > 0 && (
-                                <ProtocolVersionSwitcher 
-                                    id={p.id} 
-                                    currentVersion={versionString} 
-                                    onChange={(v) => {
-                                        const base = location.pathname.split("/versions/")[0];
-                                        nav(`${base}/versions/${v}`);
-                                    }} 
-                                />
-                            )}
-                            </div>
+                            <VersionHeader 
+                                versionString={versionString}
+                                uiStageDisplay={uiStageDisplay}
+                                uiStage={uiStage as any}
+                                language={language}
+                                switcher={
+                                    <ProtocolVersionSwitcher 
+                                        id={p.id} 
+                                        currentVersion={versionString} 
+                                        onChange={(v) => {
+                                            const base = location.pathname.split("/versions/")[0];
+                                            nav(`${base}/versions/${v}`);
+                                        }}
+                                    />
+                                }
+                            />
                         </header>
 
                         {(p.summary || release?.summary) && <p className="text-lg text-gray-600 leading-relaxed">{p.summary || release?.summary}</p>}

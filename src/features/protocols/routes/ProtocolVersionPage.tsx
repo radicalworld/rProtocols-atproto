@@ -1,7 +1,7 @@
 // src/pages/ProtocolVersionPage.tsx
 import { useParams, useNavigate } from "react-router-dom";
 import { useRelease } from "@/features/protocols/hooks/useRelease";
-import ProtocolBadge from "@/features/protocols/components/ProtocolBadge";
+import { StatusBadge } from "@/components/StatusBadge";
 import { ProtocolVersionSwitcher } from "@/features/protocols/components/ProtocolVersionSwitcher";
 import ReactMarkdown from "react-markdown";
 
@@ -20,7 +20,7 @@ export default function ProtocolVersionPage() {
         <div>
           <h1 className="text-2xl font-semibold capitalize">{id.replace(/-/g, " ")}</h1>
           <div className="mt-2">
-            <ProtocolBadge version={release.version} stage={release.stage} />
+            <StatusBadge version={`v${release.version}`} stage={release.stage as any} type="status" />
           </div>
         </div>
         <ProtocolVersionSwitcher

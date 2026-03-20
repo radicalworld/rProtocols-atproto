@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useNeed } from "@/features/needs/hooks/useNeed";
 import {
   getNeedRelease,
@@ -9,8 +9,17 @@ import {
 } from "@/features/needs/lib/releases";
 import { useRepo } from "@/domain/repo";
 import TiptapEditor from "@/components/ui/TiptapEditor";
-import NeedBadge from "@/features/needs/components/NeedBadge";
-import { STAGE_DISPLAY_MAP, formatVersion } from "@/lib/version";
+import { X } from "lucide-react";
+import { formatVersion, STAGE_DISPLAY_MAP, parseVersion } from "@/lib/version";
+import { VersionHeader } from "@/components/VersionHeader";
+import { NeedIcon } from "@/components/icons/NeedIcon";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/dialog";
 
 export default function NeedEditorProfile({
     rootId: propRootId,
@@ -32,10 +41,17 @@ export default function NeedEditorProfile({
     const repo = useRepo();
     const nav = useNavigate();
 
-    const [form, setForm] = useState({ title: "", description: "", purpose: "", language: "", tags: "" });
+    const [form, setForm] = useState({ title: "", description: "", purpose: "", language: "", tags: "", changeDescription: "" });
     const [saving, setSaving] = useState(false);
     const [msg, setMsg] = useState("");
     const [isInitialized, setIsInitialized] = useState(false);
+
+    // Save Modal & Need Selection state
+    const [searchParams] = useSearchParams();
+    const isFork = searchParams.get("fork") === "true";
+    const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+    const [targetVersionType, setTargetVersionType] = useState<"patch" | "minor" | "major">(isFork ? "major" : "patch");
+    const [targetStage, setTargetStage] = useState<"draft" | "candidate" | "stable" | "deprecated">("draft");
 
     // initialize form when release loads
     useEffect(() => {
@@ -46,11 +62,50 @@ export default function NeedEditorProfile({
                 purpose: release.purpose ?? "",
                 language: release.language ?? "en",
                 tags: release.tags ? release.tags.join(", ") : "",
+                changeDescription: ""
             });
+            setTargetStage(release.stage as any);
+            setTargetVersionType(isFork ? "major" : "patch");
             // Delay rendering the Tiptap component until this state is flushed
             requestAnimationFrame(() => setIsInitialized(true));
         }
     }, [release]);
+
+    // Clone parent data natively if Genesis Fork
+    const forkFrom = searchParams.get("forkFrom");
+    useEffect(() => {
+        let alive = true;
+        (async () => {
+            if (isNew && forkFrom) {
+                const parent = await repo.getNeedByLineageId(decodeURIComponent(forkFrom));
+                if (!alive || !parent) return;
+                setForm(prev => ({
+                    ...prev,
+                    title: parent.title || "",
+                    description: parent.description || "",
+                    purpose: parent.purpose || "",
+                    language: parent.language || "en",
+                    tags: parent.tags ? (Array.isArray(parent.tags) ? parent.tags.join(", ") : parent.tags) : "",
+                }));
+            }
+        })();
+        return () => { alive = false; };
+    }, [isNew, forkFrom, repo]);
+
+    const { major, minor, patch } = parseVersion(release?.version || "0.1.0");
+    const nextPatch = `${major}.${minor}.${patch + 1}`;
+    const nextMinor = `${major}.${minor + 1}.0`;
+    const nextMajor = `${major + 1}.0.0`;
+
+    const isStageBump = !isNew && release && targetStage !== release.stage;
+    const isFirstActive = major === 0 && targetStage === 'stable';
+    const showMajor = isFirstActive || isFork;
+
+    useEffect(() => {
+        if (isStageBump && targetVersionType === 'patch') {
+            setTargetVersionType(isFirstActive ? 'major' : 'minor');
+        }
+    }, [targetStage, isStageBump, isFirstActive, targetVersionType]);
 
     if (!isNew && loading) return <div className="p-6">Loading editor…</div>;
     if (!isNew && error) return <div className="p-6 text-red-600">{error}</div>;
@@ -58,25 +113,34 @@ export default function NeedEditorProfile({
     if (!isInitialized) return <div className="p-6 flex items-center gap-2"><div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /> Preparing editor…</div>;
 
     const canEdit = release.stage === "draft" || release.stage === "candidate";
+    const hasChanges = isNew ? form.title.trim().length > 0 : true;
 
-    async function onPublish() {
+    async function onUnifiedSave() {
         setSaving(true);
+        setMsg("");
+        setIsSaveModalOpen(false);
         try {
             if (isNew) {
                 const nid = await repo.createNeed({
                     title: form.title || "Untitled Need",
-                    description: form.description || "",
-                    purpose: "",
-                    language: "en",
-                    tags: [],
-                    parentLineageId: parentLineageId || undefined
+                    description: form.description,
+                    purpose: form.purpose,
+                    language: form.language || "en",
+                    tags: Array.isArray(form.tags) ? form.tags : form.tags.split(",").map(t => t.trim()).filter(Boolean),
+                    parentLineageId: parentLineageId || undefined,
+                    forkFrom: forkFrom || undefined
                 });
                 
                 // Automatically set the author to follow their new creation
                 const gen = await repo.getNeedByLineageId(nid) || await (repo as any).getNeedByVersion(nid, "1.0");
-                if (gen) await repo.follow(gen.lineageId);
+                if (gen) {
+                    await repo.follow(gen.lineageId).catch(e => console.warn("Failed automatic self-follow:", e));
+                    if (targetStage !== 'draft' && repo.promoteNeedVersion) {
+                        await repo.promoteNeedVersion(gen.lineageId, "0.1.0", targetStage as any);
+                    }
+                }
                 
-                setMsg(`✅ Need created! Redirecting...`);
+                setMsg(`✅ Need published! Redirecting...`);
                 
                 const targetUrl = parentLineageId 
                     ? `/${parentLineageId}/needs/${nid}` 
@@ -84,12 +148,23 @@ export default function NeedEditorProfile({
                 
                 setTimeout(() => nav(targetUrl), 200);
             } else {
+                let targetVer = release.version;
+                if (targetVersionType === 'major') targetVer = nextMajor;
+                else if (targetVersionType === 'minor') targetVer = nextMinor;
+                else targetVer = nextPatch;
+
                 const changes = {
                     ...form,
                     tags: "tags" in form && typeof form.tags === "string" ? form.tags.split(",").map(t => t.trim()).filter(Boolean) : []
                 };
-                await updateDraft(release.version, changes);
+                await updateDraft(targetVer, changes);
+                
+                if (targetStage !== 'draft' && repo.promoteNeedVersion) {
+                    await promote(targetVer, targetStage as any, form.changeDescription);
+                }
+
                 setMsg("✅ Published.");
+                if (onClose) setTimeout(() => onClose(), 800);
             }
         } catch (e: any) {
             setMsg("❌ " + e.message);
@@ -98,64 +173,51 @@ export default function NeedEditorProfile({
         }
     }
 
-    async function onPromoteCandidate() {
-        setSaving(true);
-        try {
-            await promote(release.version, "candidate", "Promoted via editor");
-            setMsg("✅ Promoted to candidate.");
-        } catch (e: any) {
-            setMsg("❌ " + e.message);
-        } finally {
-            setSaving(false);
-        }
-    }
 
     return (
-        <div className="mx-auto max-w-3xl p-6 space-y-4">
-            <header className="flex items-start justify-between">
-                <div>
-                    <h1 className="text-2xl font-semibold">{isNew ? "Create Need" : "Edit Need"}</h1>
-                    <div className="text-sm text-gray-500 mt-1">
-                        {isNew ? (
-                            <span className="flex items-center gap-2">
-                                <span className="font-semibold text-gray-700">Parent Context:</span> 
-                                <span className="uppercase tracking-wider">{parentLineageId || "None"}</span>
-                            </span>
-                        ) : (
-                            <div className="flex items-center gap-2 mt-2">
-                                <NeedBadge version={`v${formatVersion(release?.version)}`} stage="stable" />
-                                <NeedBadge version={STAGE_DISPLAY_MAP[release?.stage as string] || release?.stage} stage={release?.stage as any} />
-                                <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 border border-gray-200 uppercase tracking-wider">
-                                    {release?.language || "EN"}
+        <div className="p-6 space-y-4">
+            <header className="flex flex-col gap-4 border-b pb-4">
+                <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3">
+                        <NeedIcon className="text-gray-900 w-8 h-8 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <h1 className="text-2xl font-semibold">{isNew ? "Create Need" : "Edit Need"}</h1>
+                            {isNew && (
+                            <div className="text-sm text-gray-500 mt-1">
+                                <span className="flex items-center gap-2">
+                                    <span className="font-semibold text-gray-700">Parent Context:</span> 
+                                    <span className="uppercase tracking-wider">{parentLineageId || "None"}</span>
                                 </span>
-                                {latest && latest !== release.version && <span className="ml-2 text-xs italic text-gray-500">(latest is v{formatVersion(latest)})</span>}
                             </div>
+                        )}
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setIsSaveModalOpen(true)}
+                            disabled={!canEdit || saving || !hasChanges}
+                            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50"
+                        >
+                            Publish
+                        </button>
+                        {onClose && (
+                            <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-500 rounded-full hover:bg-gray-100 transition-colors">
+                                <X className="h-5 w-5" />
+                            </button>
                         )}
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={onPublish}
-                        disabled={!canEdit || saving}
-                        className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white shadow hover:bg-blue-700 transition disabled:opacity-50"
-                    >
-                        Publish
-                    </button>
-                    {!isNew && (
-                        <button
-                            onClick={onPromoteCandidate}
-                            disabled={!canEdit || saving}
-                            className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow hover:bg-green-700 transition disabled:opacity-50"
-                        >
-                            Promote to Candidate
-                        </button>
-                    )}
-                    {onClose && (
-                        <button onClick={onClose} className="rounded p-2 text-sm text-gray-500 hover:bg-gray-100 transition-colors ml-2">
-                            Cancel
-                        </button>
-                    )}
-                </div>
+
+                {!isNew && (
+                    <div className="-mb-2">
+                        <VersionHeader 
+                            versionString={release?.version!}
+                            uiStageDisplay={STAGE_DISPLAY_MAP[release?.stage as string] || release?.stage}
+                            uiStage={release?.stage as any}
+                            language={release?.language || "en"}
+                        />
+                    </div>
+                )}
             </header>
 
             {!canEdit && (
@@ -169,45 +231,46 @@ export default function NeedEditorProfile({
                 <input
                     id="need-title"
                     name="title"
-                    className={`mt-1 w-full rounded border p-2 ${!isNew ? "bg-gray-50 text-gray-500 cursor-not-allowed" : ""}`}
+                    className={`mt-1.5 w-full text-base rounded-xl border border-gray-300 p-2.5 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none ${!isNew ? "bg-gray-50 text-gray-400 cursor-not-allowed" : ""}`}
                     value={form.title}
                     onChange={(e) => setForm({ ...form, title: e.target.value })}
                     disabled={!isNew}
                 />
             </label>
 
-            <label className="block" htmlFor="need-language">
-                <div className="text-sm font-medium text-gray-700">Language</div>
-                <input
-                    id="need-language"
-                    name="language"
-                    className="mt-1 w-full rounded border p-2"
-                    placeholder="e.en"
-                    value={form.language}
-                    onChange={(e) => setForm({ ...form, language: e.target.value })}
-                    disabled={!canEdit || saving}
-                />
-            </label>
+            <div className="flex gap-6">
+                <label className="block flex-1" htmlFor="need-language">
+                    <div className="text-sm font-medium text-gray-700">Language <span className="text-xs text-gray-400 font-normal ml-1">(Locked)</span></div>
+                    <input
+                        id="need-language"
+                        name="language"
+                        className="mt-1.5 w-full text-base rounded-xl border border-gray-300 p-2.5 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-gray-50 text-gray-400 cursor-not-allowed"
+                        value={form.language}
+                        onChange={(e) => setForm({ ...form, language: e.target.value })}
+                        disabled={true}
+                    />
+                </label>
 
-            <label className="block" htmlFor="need-tags">
-                <div className="text-sm font-medium text-gray-700">Tags (comma separated)</div>
-                <input
-                    id="need-tags"
-                    name="tags"
-                    className="mt-1 w-full rounded border p-2"
-                    placeholder="tag1, tag2"
-                    value={form.tags}
-                    onChange={(e) => setForm({ ...form, tags: e.target.value })}
-                    disabled={!canEdit || saving}
-                />
-            </label>
+                <label className="block flex-1" htmlFor="need-tags">
+                    <div className="text-sm font-medium text-gray-700">Tags (comma separated)</div>
+                    <input
+                        id="need-tags"
+                        name="tags"
+                        className="mt-1.5 w-full text-base rounded-xl border border-gray-300 p-2.5 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                        placeholder="tag1, tag2"
+                        value={form.tags}
+                        onChange={(e) => setForm({ ...form, tags: e.target.value })}
+                        disabled={!canEdit || saving}
+                    />
+                </label>
+            </div>
 
             <label className="block" htmlFor="need-purpose">
                 <div className="text-sm font-medium text-gray-700">Purpose</div>
                 <textarea
                     id="need-purpose"
                     name="purpose"
-                    className="mt-1 w-full rounded border p-2 h-24"
+                    className="mt-1.5 w-full text-base rounded-xl border border-gray-300 p-2.5 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none min-h-[100px] resize-y"
                     value={form.purpose}
                     onChange={(e) => setForm({ ...form, purpose: e.target.value })}
                     disabled={!canEdit || saving}
@@ -226,7 +289,131 @@ export default function NeedEditorProfile({
 
             {/* Action buttons moved to header */}
 
-            {msg && <div className="text-sm text-gray-500">{msg}</div>}
+            {msg && <div className="text-sm font-medium text-gray-600 bg-gray-50 border p-3 rounded-xl shadow-sm">{msg}</div>}
+
+            <Dialog open={isSaveModalOpen} onOpenChange={setIsSaveModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Publish Changes to This Need</DialogTitle>
+                        <DialogDescription>Select how you want to release these changes.</DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-6 py-4">
+                        <div className="space-y-3">
+                            <label className="text-sm font-medium text-gray-900">What changed?</label>
+                            {isNew ? (
+                                <div className="p-3 border rounded-lg border-blue-500 bg-blue-50 text-blue-900">
+                                    <span className="block text-sm font-medium">Initial Publish (v0.1.0)</span>
+                                    <span className="block text-xs text-blue-700/80 mt-1">This will index the Need definition.</span>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 gap-2">
+                                    <label className={`flex items-center p-3 border rounded-lg transition ${targetVersionType === 'patch' ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'} ${isStageBump ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
+                                        <input 
+                                            type="radio" 
+                                            name="versionType" 
+                                            value="patch"
+                                            checked={targetVersionType === 'patch'} 
+                                            onChange={() => setTargetVersionType('patch')}
+                                            disabled={isStageBump}
+                                            className="h-4 w-4 text-blue-600 disabled:opacity-50" 
+                                        />
+                                        <span className="ml-3 block">
+                                            <span className="block text-sm font-medium">Small fix or cleanup (v{nextPatch})</span>
+                                            <span className="block text-xs text-gray-500">
+                                                {isStageBump ? "Disabled. Readiness changes require a minor or major bump." : "Append a new structural patch version. No prior records are overwritten."}
+                                            </span>
+                                        </span>
+                                    </label>
+                                    <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition ${targetVersionType === 'minor' ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'}`}>
+                                        <input 
+                                            type="radio" 
+                                            name="versionType" 
+                                            value="minor"
+                                            checked={targetVersionType === 'minor'} 
+                                            onChange={() => setTargetVersionType('minor')}
+                                            className="h-4 w-4 text-blue-600" 
+                                        />
+                                        <span className="ml-3 block">
+                                            <span className="block text-sm font-medium">Improvement or clarification (v{nextMinor})</span>
+                                            <span className="block text-xs text-gray-500">Append a new minor feature block layout. No prior records are overwritten.</span>
+                                        </span>
+                                    </label>
+                                    {showMajor && (
+                                        <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition ${targetVersionType === 'major' ? 'border-amber-500 bg-amber-50' : 'hover:bg-gray-50'}`}>
+                                            <input 
+                                                type="radio" 
+                                                name="versionType" 
+                                                value="major"
+                                                checked={targetVersionType === 'major'} 
+                                                onChange={() => setTargetVersionType('major')}
+                                                className="h-4 w-4 text-amber-600" 
+                                            />
+                                            <span className="ml-3 block">
+                                                <span className="block text-sm font-medium text-amber-900">New Version (v{nextMajor})</span>
+                                                <span className="block text-xs text-amber-700/80">Creates a distinct, independent branch of this need.</span>
+                                            </span>
+                                        </label>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="space-y-3">
+                            <label className="text-sm font-medium text-gray-900">Readiness</label>
+                            <div className="flex p-1 bg-gray-100 rounded-lg">
+                                <button 
+                                    onClick={() => setTargetStage('draft')}
+                                    className={`flex-1 py-1.5 text-sm font-medium rounded-md transition ${targetStage === 'draft' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                                >Evolving</button>
+                                <button 
+                                    onClick={() => !isNew && setTargetStage('candidate')}
+                                    disabled={isNew}
+                                    className={`flex-1 py-1.5 text-sm font-medium rounded-md transition ${targetStage === 'candidate' ? 'bg-white shadow-sm text-amber-700' : 'text-gray-500 hover:text-gray-700'} ${isNew ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                >In Review</button>
+                                <button 
+                                    onClick={() => !isNew && setTargetStage('stable')}
+                                    disabled={isNew}
+                                    className={`flex-1 py-1.5 text-sm font-medium rounded-md transition ${targetStage === 'stable' ? 'bg-white shadow-sm text-green-700' : 'text-gray-500 hover:text-gray-700'} ${isNew ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                >Active</button>
+                                <button 
+                                    onClick={() => !isNew && setTargetStage('deprecated')}
+                                    disabled={isNew}
+                                    className={`flex-1 py-1.5 text-sm font-medium rounded-md transition ${targetStage === 'deprecated' ? 'bg-white shadow-sm text-red-700' : 'text-gray-500 hover:text-gray-700'} ${isNew ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                >Retired</button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            <label className="text-sm font-medium text-gray-900" htmlFor="change-note">Add a note (optional)</label>
+                            <p className="text-xs text-gray-500 mt-1 mb-2">Help others understand what’s different.</p>
+                            <textarea
+                                id="change-note"
+                                className="w-full text-sm rounded-lg border border-gray-300 p-3 h-20 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-none"
+                                placeholder="..."
+                                value={form.changeDescription}
+                                onChange={(e) => setForm({ ...form, changeDescription: e.target.value })}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                        <button
+                            onClick={() => setIsSaveModalOpen(false)}
+                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={() => onUnifiedSave()}
+                            disabled={saving}
+                            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                        >
+                            {saving ? "Publishing..." : "Confirm Publish"}
+                        </button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

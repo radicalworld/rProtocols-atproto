@@ -1,7 +1,9 @@
 import { useEffect, useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import ProtocolBadge from "@/features/protocols/components/ProtocolBadge";
-import { STAGE_DISPLAY_MAP, formatVersion } from "@/lib/version";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { latestSuiteVersion, getSuiteRelease } from "@/features/suites/lib/releases";
+import { formatVersion, STAGE_DISPLAY_MAP } from "@/lib/version";
+import { VersionHeader } from "@/components/VersionHeader";
+import { SuiteIcon } from "@/components/icons/SuiteIcon";
 import { useRepo } from "@/domain/repo";
 import { Protocol } from "@/domain/types";
 import { parseVersion } from "@/lib/version";
@@ -20,6 +22,7 @@ export default function SuiteEditorProfile({
     onClose?: (newId?: string) => void;
 } = {}) {
     const params = useParams();
+    const [searchParams] = useSearchParams();
     const nav = useNavigate();
     const rootId = propRootId || params.suiteId || (isNew ? "new" : "");
     const repo = useRepo();
@@ -58,13 +61,36 @@ export default function SuiteEditorProfile({
     }
 
     const [form, setForm] = useState({ title: "", purpose: "", language: "", tags: "", protocols: [] as ProtocolLink[], changeDescription: "" });
+    
+    // Clone parent data natively if Genesis Fork
+    const forkFrom = searchParams.get("forkFrom");
+    useEffect(() => {
+        let alive = true;
+        (async () => {
+            if (isNew && forkFrom) {
+                const parent = await repo.getSuiteWithActiveMerge(decodeURIComponent(forkFrom));
+                if (!alive || !parent) return;
+                const parentProtocols = await repo.getSuiteProtocols(parent.lineageId);
+                setForm(prev => ({
+                    ...prev,
+                    title: parent.title || "",
+                    purpose: (parent as any).purpose || parent.description || "",
+                    language: parent.language || "en",
+                    tags: parent.tags ? (Array.isArray(parent.tags) ? parent.tags.join(", ") : parent.tags) : "",
+                    protocols: parentProtocols.map(p => ({ lineageId: p.id, title: p.title, slug: p.slug }))
+                }));
+            }
+        })();
+        return () => { alive = false; };
+    }, [isNew, forkFrom, repo]);
     const [saving, setSaving] = useState(false);
     const [msg, setMsg] = useState("");
     const [isInitialized, setIsInitialized] = useState(false);
     
     // Save Modal & Protocol Selection state
+    const isFork = searchParams.get("fork") === "true";
     const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
-    const [targetVersionType, setTargetVersionType] = useState<"patch" | "minor" | "major">("patch");
+    const [targetVersionType, setTargetVersionType] = useState<"patch" | "minor" | "major">(isFork ? "major" : "patch");
     const [targetStage, setTargetStage] = useState<"draft" | "candidate" | "stable" | "deprecated">("draft");
     const [allProtocols, setAllProtocols] = useState<Protocol[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
@@ -82,7 +108,7 @@ export default function SuiteEditorProfile({
                 changeDescription: ""
             });
             setTargetStage(release.stage as any);
-            setTargetVersionType("patch");
+            setTargetVersionType(isFork ? "major" : "patch");
             setIsInitialized(true);
         }
     }, [release]);
@@ -108,6 +134,7 @@ export default function SuiteEditorProfile({
 
     const isStageBump = !isNew && release && targetStage !== release.stage;
     const isFirstActive = major === 0 && targetStage === 'stable';
+    const showMajor = isFirstActive || isFork;
 
     useEffect(() => {
         if (isStageBump && targetVersionType === 'patch') {
@@ -136,7 +163,8 @@ export default function SuiteEditorProfile({
                     tags: form.tags.split(",").map(t => t.trim()).filter(Boolean),
                     language: form.language || "en",
                     includeProtocols: mappedProtocols,
-                    parentNeedLineageId: parentNeedId || undefined
+                    parentNeedLineageId: parentNeedId || undefined,
+                    forkFrom: forkFrom || undefined
                 });
 
                 // Track creation Follows safely via validated Lineage IDs
@@ -217,42 +245,52 @@ export default function SuiteEditorProfile({
         setDraggedIdx(null);
     };
 
+    const versionString = release?.version ? `v${formatVersion(release.version)}` : undefined;
+
     return (
-        <div className="mx-auto max-w-3xl p-6 space-y-6">
-            <header className="flex items-start justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-gray-900">{isNew ? "Create Suite" : "Edit Suite"}</h1>
-                    <div className="text-sm font-medium text-gray-500 mt-2">
-                        {isNew ? (
-                            <span className="flex items-center gap-2">
-                                <span className="text-gray-400">Context:</span> 
-                                <span className="uppercase tracking-widest text-xs bg-gray-100 rounded-full px-2.5 py-0.5 border border-gray-200">{parentNeedId || "Network"}</span>
-                            </span>
-                        ) : (
-                            <div className="flex items-center gap-2 mt-2">
-                                <ProtocolBadge version={`v${formatVersion(release?.version)}`} stage="stable" />
-                                <ProtocolBadge version={STAGE_DISPLAY_MAP[release?.stage as string] || release?.stage} stage={release?.stage as any} />
-                                <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 border border-gray-200 uppercase tracking-wider">
-                                    {release?.language || "EN"}
-                                </span>
-                            </div>
+        <div className="p-6 space-y-4">
+            <header className="flex flex-col gap-4 border-b pb-4">
+                <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3">
+                        <SuiteIcon className="text-gray-900 w-8 h-8 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <h1 className="text-2xl font-semibold">{isNew ? "Create Suite" : "Edit Suite"}</h1>
+                            {isNew && (
+                                <div className="text-sm text-gray-500 mt-1">
+                                    <span className="flex items-center gap-2">
+                                        <span className="font-semibold text-gray-700">Parent Context:</span> 
+                                        <span className="uppercase tracking-wider">{parentNeedId || "None"}</span>
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setIsSaveModalOpen(true)}
+                            disabled={!canEdit || saving || !hasChanges}
+                            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50"
+                        >
+                            Publish
+                        </button>
+                        {onClose && (
+                            <button onClick={() => onClose()} className="p-2 text-gray-400 hover:text-gray-500 rounded-full hover:bg-gray-100 transition-colors">
+                                <X className="h-5 w-5" />
+                            </button>
                         )}
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setIsSaveModalOpen(true)}
-                        disabled={!canEdit || saving || !hasChanges}
-                        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        Publish
-                    </button>
-                    {onClose && (
-                        <button onClick={() => onClose()} aria-label="Close Editor" className="rounded-lg p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors ml-1">
-                            <X className="w-5 h-5" />
-                        </button>
-                    )}
-                </div>
+
+                {!isNew && (
+                    <div className="-mb-2">
+                        <VersionHeader 
+                            versionString={versionString!}
+                            uiStageDisplay={STAGE_DISPLAY_MAP[targetStage] || targetStage}
+                            uiStage={targetStage as any}
+                            language={form.language}
+                        />
+                    </div>
+                )}
             </header>
 
             {!canEdit && (
@@ -445,7 +483,7 @@ export default function SuiteEditorProfile({
                                             <span className="block text-xs text-gray-500">Append a new minor feature block layout. No prior records are overwritten.</span>
                                         </span>
                                     </label>
-                                    {isFirstActive && (
+                                    {showMajor && (
                                         <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition ${targetVersionType === 'major' ? 'border-amber-500 bg-amber-50' : 'hover:bg-gray-50'}`}>
                                             <input 
                                                 type="radio" 
@@ -456,8 +494,8 @@ export default function SuiteEditorProfile({
                                                 className="h-4 w-4 text-amber-600" 
                                             />
                                             <span className="ml-3 block">
-                                                <span className="block text-sm font-medium text-amber-900">Official Release (v{nextMajor})</span>
-                                                <span className="block text-xs text-amber-700/80">Promotes this Suite mapping to an active, structurally certified component.</span>
+                                                <span className="block text-sm font-medium text-amber-900">New Version (v{nextMajor})</span>
+                                                <span className="block text-xs text-amber-700/80">Creates a distinct, independent branch of this suite.</span>
                                             </span>
                                         </label>
                                     )}

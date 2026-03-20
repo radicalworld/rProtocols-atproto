@@ -1,5 +1,5 @@
 // src/components/ProtocolTile.tsx
-import ProtocolBadge from "@/features/protocols/components/ProtocolBadge";
+import { StatusBadge } from "@/components/StatusBadge";
 import { latestVersion, listReleases } from "@/features/protocols/lib/releases";
 import type { ProtocolRelease as Release } from "@/domain/types";
 import { Link } from "react-router-dom";
@@ -11,7 +11,7 @@ export function ProtocolTile({
         <div className="rounded-2xl border p-4 shadow-sm hover:shadow-md transition">
         <div className="flex items-start justify-between">
             <h3 className="font-semibold text-base">{id.replace(/-/g, " ")}</h3>
-            <ProtocolBadge version={release.version} stage={release.stage} />
+            <StatusBadge version={`v${release.version}`} stage={release.stage as any} type="status" />
         </div>
         <p className="mt-2 text-sm text-zinc-700 line-clamp-3">{release.purpose}</p>
         <div className="mt-3 flex items-center gap-3 text-xs text-zinc-600">

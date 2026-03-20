@@ -141,6 +141,10 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
         return { id, title: id.split("/").pop() ?? "Suite", description: "", protocolIds: [] } as any;
     }
 
+    async getSuiteWithActiveMerge(id: string) {
+        return this.getSuite(id);
+    }
+
     async getProtocol(id: string) {
         return { id, title: id.split("/").pop() ?? "Protocol", summary: "", body: "" } as any;
     }
@@ -159,6 +163,9 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
     async getSuiteProtocols(suiteId: string) { 
         return mockRepo.getSuiteProtocols(suiteId); 
     }
+    async getNeedByLineageId(id: string) {
+        return mockRepo.getNeedByLineageId(id);
+    }
 
     // Protocol stub resolvers
     async resolveProtocolSlug() { return null; }
@@ -168,17 +175,39 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
     
     // Write port stubs
     // Write port native implementations
-    async createNeed(payload: Pick<Need, "title" | "description" | "parentLineageId">, forceId?: string): Promise<string> { 
+    async createNeed(payload: Pick<Need, "title" | "description" | "parentLineageId"> & { forkFrom?: string }, forceId?: string): Promise<string> { 
         if (!this.viewerDid) throw new Error("Not authenticated");
         const rootId = forceId || payload.title.toLowerCase().replace(/\s+/g, "-");
-        await this.updateNeedDraft(rootId, "0.1.0", { ...payload, parentLineageId: payload.parentLineageId ?? null } as any);
+        
+        let familyObj = undefined;
+        let versionString = "0.1.0";
+        if (payload.forkFrom) {
+             const parent = await this.getNeedByLineageId?.(payload.forkFrom);
+             if (parent) {
+                 if (parent.family) familyObj = parent.family;
+                 versionString = "2.0.0"; // Arbitrary major jump for PDS initialization
+             }
+        }
+        
+        await this.updateNeedDraft(rootId, versionString, { ...payload, parentLineageId: payload.parentLineageId ?? null, family: familyObj, forkFrom: payload.forkFrom } as any);
         return rootId;
     }
     
-    async createProtocol(payload: Pick<Protocol, "title" | "summary" | "body" | "tags" | "language">, forceId?: string): Promise<string> { 
+    async createProtocol(payload: Pick<Protocol, "title" | "summary" | "body" | "tags" | "language"> & { forkFrom?: string }, forceId?: string): Promise<string> { 
         if (!this.viewerDid) throw new Error("Not authenticated");
         const rootId = forceId || payload.title.toLowerCase().replace(/\s+/g, "-");
-        await this.updateProtocolDraft(rootId, "0.1.0", payload);
+        
+        let familyObj = undefined;
+        let versionString = "0.1.0";
+        if (payload.forkFrom) {
+             const parent = await this.getProtocol(payload.forkFrom);
+             if (parent) {
+                 if (parent.family) familyObj = parent.family;
+                 versionString = "2.0.0";
+             }
+        }
+        
+        await this.updateProtocolDraft(rootId, versionString, { ...payload, family: familyObj, forkFrom: payload.forkFrom });
         return rootId;
     }
     
@@ -221,6 +250,9 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
                     stage: "draft",
                     createdAt: new Date().toISOString(),
                     language: patch.language ?? "en",
+                    family: (patch as any).family ?? { id: `rp_fm_${rootId}`, origin: { uri: `at://${this.viewerDid}/org.rp.need/${rootId}`, cid: dummyCid } },
+                    release: (patch as any).forkFrom ? { kind: "fork", bump: "major" } : { kind: "genesis", bump: "patch" },
+                    ...((patch as any).forkFrom ? { familyEvent: { type: "candidate-major-fork", status: "pending" } } : {}),
                     authorship: {
                         authorDid: this.viewerDid
                     },
@@ -294,6 +326,9 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
                     stage: "draft",
                     createdAt: new Date().toISOString(),
                     language: patch.language ?? "en",
+                    family: patch.family ?? { id: `rp_fm_${rootId}`, origin: { uri: `at://${this.viewerDid}/org.rp.protocol/${rootId}`, cid: dummyCid } },
+                    release: patch.forkFrom ? { kind: "fork", bump: "major" } : { kind: "genesis", bump: "patch" },
+                    ...(patch.forkFrom ? { familyEvent: { type: "candidate-major-fork", status: "pending" } } : {}),
                     authorship: {
                         authorDid: this.viewerDid
                     },
@@ -342,6 +377,16 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
         const rootId = forceId ? `rp_st_${forceId}` : `rp_st_${Math.random().toString(36).slice(2, 10)}`;
         const rkey = `rpv${Math.random().toString(36).slice(2, 7)}`;
         
+        let familyObj = undefined;
+        let versionString = "0.1.0";
+        if (payload.forkFrom) {
+             const parent = await this.getSuite(payload.forkFrom);
+             if (parent) {
+                 if (parent.family) familyObj = parent.family;
+                 versionString = "2.0.0";
+             }
+        }
+        
         try {
             await this.agent.com.atproto.repo.putRecord({
                 repo: this.viewerDid,
@@ -354,10 +399,13 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
                         root: { uri: `at://${this.viewerDid}/org.rp.suite/${rootId}`, cid: "mock" }
                     },
                     slug: rootId,
-                    version: "0.1.0",
+                    version: versionString,
                     stage: "draft",
                     createdAt: new Date().toISOString(),
                     language: payload.language ?? "en",
+                    family: familyObj ?? { id: `rp_fm_${rootId}`, origin: { uri: `at://${this.viewerDid}/org.rp.suite/${rootId}`, cid: "mock" } },
+                    release: payload.forkFrom ? { kind: "fork", bump: "major" } : { kind: "genesis", bump: "patch" },
+                    ...(payload.forkFrom ? { familyEvent: { type: "candidate-major-fork", status: "pending" } } : {}),
                     authorship: {
                         authorDid: this.viewerDid
                     },

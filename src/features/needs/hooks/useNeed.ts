@@ -43,13 +43,13 @@ export function useNeed(rootId?: string, version?: string): NeedState {
       // Adapt the domain Need into the legacy NeedRelease shape expected by the UI
       const rel: NeedRelease = {
          rootId: rootId,
-         version: version || "1.0", // Mocks always default to 1.0 if not specified
-         stage: "draft",            // Default to draft locally so editor fields unlock
+         version: (needData as any).version || version || "0.1.0", // dynamically map PDS version overriding mock 0.1.0
+         stage: (needData as any).stage || "draft",                // dynamically map PDS stage overriding mock defaults
          title: needData.title,
          description: needData.description,
          purpose: needData.purpose || "",
-         language: "en",            // Mocks
-         tags: []                   // Mocks
+         language: needData.language || "en",
+         tags: needData.tags || []
       };
 
       setLatest(undefined);

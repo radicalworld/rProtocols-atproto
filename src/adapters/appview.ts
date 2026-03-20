@@ -182,6 +182,10 @@ export class AppViewAdapter implements RPReadPort {
     async getNeedTree() { return { id: "draft-nd-a", version: "1.0", stage: "stable", date: "", need: { id: "a" } as Need, suites: [] as Suite[] } as unknown as NeedNode; }
     async getNeedByVersion() { return null; }
     async getProtocolsForNeed() { return []; }
+    
+    async getSuiteWithActiveMerge(id: string) {
+        return this.getSuite(id);
+    }
     async getMarks() { return []; }
     async getSuite(suiteId: string): Promise<Suite | null> {
         try {

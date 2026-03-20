@@ -1,8 +1,8 @@
-# `org.rp.v1.2` Specification
+# `org.rp.v1.3` Specification
 
 The **rProtocols V1 Schema** defines a lineage-based data model for collaboratively creating, evolving, and adopting Needs, Protocols, Suites, and Marks across the ATProto network.
 
-Each record represents an **immutable version within a lineage graph**, where evolution is expressed through explicit references between records.
+Each record represents an **immutable version within a lineage**, while related lineages are grouped into a family representing the full evolution of a protocol across forks.
 
 Records are stored in ATProto repositories and inherit:
 * Authenticity via DIDs
@@ -23,83 +23,94 @@ Each record:
 * is immutable
 * represents a single version
 * participates in a lineage graph
+* belongs to a family of related lineages
 
 ### 1.2 Design Foundations
 
 1. **Immutability**
-   * A recorded version MUST NOT be edited, overwritten, or mutated in the repository—even during draft phases.
+   * A version MUST NOT be edited, overwritten, or mutated in the repository—even during draft phases.
    * Any modification of a record MUST result in a semantic version increment and a distinct new record.
 
 2. **Lineage over mutation**
-   * Evolution is expressed through explicit references.
+   * Evolution occurs through new versions linked by prev.
 
-3. **Strong references**
+3. **Family over fragmentation**
+   * Forks create new lineages but remain connected through a shared family.
+
+4. **Strong references**
    * All lineage edges use { uri, cid }.
 
-4. **Separated identity layers**
-   * Canonical identity → lineage
-   * Human-readable identity → slug
+5. **Separated identity layers**
+   * Family → global evolution
+   * Lineage → branch evolution
+   * Slug → human-readable reference
 
-5. **Forks create new lineage**
-   * Lineages never split internally.
+6. **Decentralized authorship**
+   * Any DID can create a new lineage.
+   * Any DID can fork an existing lineage.
+   * Any DID can create a mark.
+   * Participants may fork without coordination.
+
+7. **Network-resolved family ordering**
+   * Family-wide version ordering is computed by AppViews, not authored directly.
 
 ## 2. Core Primitives
 
 ### 2.1 Strong Reference
 
 ```ts
+
 type StrongRef = {
     uri: string, // at://did/.../collection/rkey
     cid: string  // bafy...
 }
 ```
 
-### 2.2 Lineage Object
+### 2.2 Family Object
 
 ```ts
-lineage: {
-    id: string, // typed opaque ID (see 2.3)
 
+family: {
+    id: string,
+    origin: StrongRef
+}
+```
+
+**Constraints**
+* MUST be globally unique
+* MUST remain stable across all descendants
+* MUST be preserved across forks
+* origin MUST reference the first published version in the family
+
+### 2.3 Lineage Object
+
+```ts
+
+lineage: {
+    id: string, // typed opaque ID
     root: StrongRef,     // first record in lineage
     prev?: StrongRef,    // immediate predecessor
     forkedFrom?: StrongRef // only present if this lineage was forked
 }
 ```
 
-### 2.3 Lineage ID Format (Constraint)
+**Constraints**
+* Identifies a single branch
+* Versions MUST increase monotonically within a lineage
+* Forking creates a new lineage
+* forkedFrom MUST reference the source version
 
-The lineage.id MUST:
 
-* be globally unique
-* remain stable across all versions
-* encode entity type
-* be opaque (non-semantic beyond prefix)
-
-**Format**
-
-```text
-
-rp_<type>_<opaqueId>
-```
-
-**Types Prefixes**
-
-Type | Prefix
-Need | rp_nd
-Protocol | rp_pt
-Suite | rp_st
-Mark | rp_mk
-
-**Example**
+### 2.4 ID Formats
 
 ```txt
 
-rp_pt_01JQ7M8D9K3S6W1B2N4C7R5YF2
+Family   rp_fm_<opaqueId>
+Need     rp_nd_<opaqueId>
+Protocol rp_pt_<opaqueId>
+Suite    rp_st_<opaqueId>
+Mark     rp_mk_<opaqueId>
 ```
-
-**Constraint**
-
-The type prefix in lineage.id MUST match the record $type across all versions.
 
 ## 3. Atomic Structure
 
@@ -112,13 +123,24 @@ The type prefix in lineage.id MUST match the record $type across all versions.
     lineage: {
         id: "rp_nd_01JQ...",
         root: StrongRef,
-        prev: StrongRef
+        prev: StrongRef,
+        forkedFrom?: StrongRef
     },
 
     slug: "open-protocols",
 
     version: "1.0.0",
     stage: "stable",
+
+    release: {
+        kind: "genesis" | "update" | "fork",
+        bump: "major" | "minor" | "patch"
+    },
+
+    familyEvent?: {
+        type: "candidate-major-fork",
+        status: "pending"
+    },
 
     createdAt: "2026-03-16T18:42:11Z",
     language: "en",
@@ -127,9 +149,8 @@ The type prefix in lineage.id MUST match the record $type across all versions.
         authorDid: "did:plc:abc123..."
     },
 
-    context: "Creating, evolving, and sharing open protocols",
-    description: "The internet lacks a native layer...",
-    purpose: "To enable decentralized protocol collaboration.",
+    title: "Open Protocols",
+    summary: "The internet lacks a native layer...",
 
     relations: {
         parent?: StrongRef,
@@ -158,10 +179,16 @@ The type prefix in lineage.id MUST match the record $type across all versions.
 {
     $type: "org.rp.protocol",
 
+    family: {
+        id: "rp_fm_01JQ...",
+        origin: StrongRef
+    },
+
     lineage: {
         id: "rp_pt_02AB...",
         root: StrongRef,
-        prev: StrongRef
+        prev?: StrongRef,
+        forkedFrom?: StrongRef
     },
 
     slug: "protocol-creation",
@@ -184,7 +211,6 @@ The type prefix in lineage.id MUST match the record $type across all versions.
     title: "Protocol Creation",
     summary: "A mechanism for drafting and publishing standards.",
     protocolBody: "...",
-    purpose: "To standardize authoring flows.",
 
     scope?: {
         appliesTo?: string[],
@@ -218,10 +244,16 @@ The type prefix in lineage.id MUST match the record $type across all versions.
 {
     $type: "org.rp.suite",
 
+    family: {
+        id: "rp_fm_01JQ...",
+        origin: StrongRef
+    },
+
     lineage: {
-        id: "rp_st_03XY...",
+        id: "rp_pt_02AB...",
         root: StrongRef,
-        prev: StrongRef
+        prev?: StrongRef,
+        forkedFrom?: StrongRef
     },
 
     slug: "collaboration-suite",
@@ -237,8 +269,7 @@ The type prefix in lineage.id MUST match the record $type across all versions.
     },
 
     title: "Collaborative Protocols",
-    description: "A collection of standards for collaboration.",
-    purpose: "To provide a unified toolkit.",
+    summary: "A collection of standards for collaboration.",
 
     members: {
         needs: StrongRef[],
@@ -292,10 +323,7 @@ The type prefix in lineage.id MUST match the record $type across all versions.
 major.minor.patch
 ```
 
-* major → breaking conceptual change
-* minor → additive or refinement
-
-### 4.2 Versioning Semantics (Constraint)
+### 4.2 Versioning Semantics
 
 Level | Meaning
 --- | ---
@@ -305,38 +333,84 @@ patch | Non-substantive change (formatting, wording, metadata)
 
 ### 4.3 Versioning Conditions
 
-* A version record MUST NEVER be overwritten in the repository.
-* Every save or modification MUST increment the version and produce a new record.
-* Versions MUST increase monotonically within lineage.
-* Genesis version SHOULD be 0.1.0
+* MUST be immutable
+* MUST increase monotonically within lineage
+* MUST NOT compared across lineages
+* Genesis SHOULD be 0.1.0
 * 1.0.0 indicates stable readiness
 
-### 4.4 Patch Constraints
+### 4.4 Cross-Lineage Constraints
 
-Patch increments MUST NOT:
-* alter meaning or intent
-* change scope or applicability
-* affect protocol behavior
+* Version numbers MUST NOT be used to determine global ordering
+* Family-level ordering MUST be resolved via AppView
 
 ## 5. Forking Model
 
-Forking creates a new lineage.
+Forking creates a new lineage with the same family.
 
 ```ts
 
-lineage: {
-    id: "rp_pt_new...",
-    root: StrongRef,
-    forkedFrom: StrongRef
+release: {
+    kind: "fork",
+    bump: "major"
+},
+
+familyEvent: {
+    type: "candidate-major-fork",
+    status: "pending"
 }
 ```
 
 **Forking Constraints**
-* A fork MUST NOT reuse the original lineage ID
-* A fork MUST reference its origin via forkedFrom
-* Forks evolve independently
+* MUST create a new lineage.id
+* MUST preserve family.id
+* MUST reference source via forkedFrom
+* MUST NOT assign a family-major number directly
+* MAY declare a candidate family event
 
-## 6. Lifecycle Model
+## 6. Family Version Resolution
+
+Family-wide versioning is computed by AppViews.
+
+### 6.1 Canonical vs Computed
+
+**Field** | **Source**
+---|---
+version | authored (lineage-local)
+familyVersion | computed (AppView)
+
+### 6.2 Candidate Events
+
+A version is a candidate if:
+* release.kind === "fork"
+* familyEvent.type === "candidate-major-fork"
+* lineage.root is this version
+
+### 6.3 Assignment Policy
+
+AppViews SHOULD:
+1. collect all candidate events within a family
+2. order them by:
+    * createdAt
+    * URI (tie-break)
+    * CID (final tie-break)
+3. assign incremental family-major ordinals
+
+### 6.4 Stability
+* Assigned ordinals SHOULD remain stable
+* Reordering SHOULD only occur if graph completeness changes
+
+### 6.5 Social Signals
+
+AppViews MAY compute:
+* followers
+* adopters
+* recency
+* trust weighting
+
+These MUST NOT affect ordinal numbering.
+
+## 7. Lifecycle Model
 
 ```txt
 
@@ -349,67 +423,68 @@ draft → candidate → stable → deprecated
 * **stable** → broadly usable
 * **deprecated** → no longer recommended
 
-## 7. Identity Model
+## 8. Identity Model
 
-### 7.1 Canonical Identity
+**Layer** | **Meaning**
+---|---
+family.id | global protocol evolution
+lineage.id | branch identity
+slug | human-readable reference
 
-* lineage.id is the true identity
-* MUST be opaque and stable (never changes)
+**Constraints**
+* title MUST NOT change within lineage
+* language MUST NOT change within lineage
+* breaking identity changes REQUIRE fork
 
-### 7.2 Human Identity
+## 9. Lineage & Family Reconstruction
 
-* slug is:
-  * human-readable
-  * URL-friendly
-  * mutable   
-
-**Identity Constraint**
-
-* slug MUST NOT be used to determine lineage.
-
-### 7.3 Immutable Core Metadata
-
-The semantic identity of a lineage graph is established at genesis.
-* `title` MUST NOT be modified across versions within the same lineage.
-* `language` MUST NOT be modified across versions within the same lineage.
-
-**Constraint**
-* To safely introduce a change to these core identity attributes, participants MUST explicitly fork into a new lineage.
-
-## 8. Lineage Reconstruction
-
-**Clients MUST reconstruct lineage using:**
-
+**Clients MUST use:**
+* family.origin
 * lineage.root
 * lineage.prev
 * lineage.forkedFrom
 
 **Clients MUST NOT rely on:**
-
 * version strings alone
-* manually maintained history arrays
-
-## 9. Integrity Model
-
-**Integrity is guaranteed by:**
-
-* ATProto repository signing
-* CID hashing (DAG-CBOR)
-* StrongRef verification
 
 ## 10. AppView Responsibilities
 
 **AppViews SHOULD:**
 
-* index lineage graphs
-* resolve latest stable versions
-* compute adoption signals
+* index families and lineages
+* resolve lineage versions
+* assign family-major ordinals
+* compute familyVersion display values
 * map fork trees
-* cache lineage traversal
+* compute adoption signals
+* expose recommendation policies
 
-## 11. Terminology Alignment
+## 11. Marks
 
-**To reflect the nature of protocols:**
+### 11.1 Structure
+
+```ts
+
+subject: {
+    kind: "need" | "protocol" | "suite",
+
+    familyId?: string,
+    lineageId?: string,
+    versionRef?: StrongRef,
+
+    pinMode: "exact" | "floating-lineage-stable" | "floating-family-stable"
+}
+```
+
+### 11.2 Semantics
+
+**Mode** | **Meaning**
+---|---
+exact | fixed version
+floating-lineage-stable | latest stable in a lineage
+floating-family-stable | AppView-selected stable in a family
+
+## 12. Terminology Alignment
 
 **Instead of** | **Use**
 rules | constraints / conditions
@@ -421,14 +496,13 @@ execution | participation
 * `collection` → **type**
 * `rkey` → **slug**
 
-## 12. Summary
+## 13. Summary
 
-**org.rp.v1 establishes:**
+**org.rp.v1.3 establishes:**
 
-* Lineage-first coordination
-* Typed, stable identity
-* ATProto-native referencing
-* Clear fork semantics
-* Separation of human vs canonical identity
-* Support for living, evolving protocols
-
+* Dual-layer identity (family + lineage)
+* Lineage-local versioning
+* Fork-as-request model
+* AppView-resolved family ordering
+* Separation of canonical vs computed truth
+* Support for decentralized, evolving protocol ecosystems
