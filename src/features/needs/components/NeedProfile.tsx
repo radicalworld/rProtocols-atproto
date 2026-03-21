@@ -58,8 +58,8 @@ export function NeedProfile() {
 
   // version info
   const selectedVersion = parsed.ver ?? paramVersion ?? (n as any).version ?? latestNeedVersion(n.lineageId) ?? "0.1.0";
-  const release = getNeedRelease(n.lineageId, selectedVersion);
-  const versionString = release?.version ?? selectedVersion;
+  const release = n.release ?? getNeedRelease(n.lineageId, selectedVersion);
+  const versionString = n.release?.version ?? (n as any).version ?? release?.version ?? selectedVersion;
   const { major } = parseVersion(versionString);
   const uiStage = release?.stage ?? (n as any).stage ?? (major === 0 ? "draft" : "stable");
 
@@ -105,11 +105,12 @@ export function NeedProfile() {
               </div>
 
               {/* badges + version switcher */}
-              <VersionHeader 
+              <VersionHeader
                   versionString={versionString}
-                  uiStageDisplay={uiStageDisplay}
                   uiStage={uiStage}
+                  uiStageDisplay={uiStageDisplay}
                   language={language}
+                  isPendingFork={n.familyEvent?.status === 'pending'}
                   switcher={
                     <NeedVersionSwitcher
                       rootId={ rootId }

@@ -4,7 +4,8 @@
 
 export function parseVersion(ver: string | undefined) {
     if (!ver) return { major: 0, minor: 0, patch: 0 };
-    const [majStr, minStr, patchStr] = ver.split(".");
+    const cleanVer = ver.startsWith('v') ? ver.substring(1) : ver;
+    const [majStr, minStr, patchStr] = cleanVer.split(".");
     let major = parseInt(majStr, 10);
     if (isNaN(major)) major = 0;
     const minor = parseInt(minStr, 10) || 0;

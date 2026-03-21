@@ -23,7 +23,7 @@ export function RepoProvider({ children, repo }: { children: React.ReactNode; re
         // Create a base proxy that prefers mockRepo in DEV so local edits reflect instantly.
         // In prod, it prefers AppView for reads, falling back to mockRepo for un-ported queries.
 
-        const useMockFirst = true;
+        const useMockFirst = false;
 
         const baseReader: any = Object.create(mockRepo);
 
@@ -165,7 +165,10 @@ export function RepoProvider({ children, repo }: { children: React.ReactNode; re
             hybrid.createSuite = async (payload: Pick<Suite, "title" | "purpose" | "tags" | "language" | "includeProtocols"> & { parentNeedLineageId?: string }) => {
                 const id = await mockRepo.createSuite(payload);
                 if ((at as any).createSuite) {
-                    try { await (at as any).createSuite(payload, id); } 
+                    try { 
+                        const pdsId = await (at as any).createSuite(payload, id); 
+                        return pdsId;
+                    } 
                     catch (e) { console.warn("PDS Warning: Failed to sync Suite creation natively.", e); }
                 }
                 return id;

@@ -73,10 +73,10 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
     const selectedVersion =
         parsed.kind === "slugVer"
             ? parsed.ver
-            : paramVersion ?? latestVersion(p.id) ?? "1.0";
+            : paramVersion ?? p.version ?? latestVersion(p.id) ?? "1.0";
 
-    const release = getRelease(p.id, selectedVersion);
-    const versionString = release?.version ?? selectedVersion ?? "1.0";
+    const release = p.release ?? getRelease(p.id, selectedVersion);
+    const versionString = p.release?.version ?? p.version ?? release?.version ?? selectedVersion ?? "1.0";
     const { major, minor } = parseVersion(versionString);
 
     // normalize stage names
@@ -155,10 +155,11 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
                             </div>
 
                             <VersionHeader 
-                                versionString={versionString}
-                                uiStageDisplay={uiStageDisplay}
-                                uiStage={uiStage as any}
+                                versionString={versionString} 
+                                uiStage={uiStage as any} 
+                                uiStageDisplay={uiStageDisplay} 
                                 language={language}
+                                isPendingFork={p.familyEvent?.status === 'pending'}
                                 switcher={
                                     <ProtocolVersionSwitcher 
                                         id={p.id} 

@@ -31,7 +31,7 @@ export function SuiteProfile({ suiteId: propId }: { suiteId?: string } = {}) {
   useEffect(() => {
     let alive = true;
     (async () => {
-      if (!id || isEditing) return;
+      if (!id) return;
       const s = await repo.getSuite(decodeURIComponent(id));
       if (!alive) return;
       setSuite(s);
@@ -51,11 +51,11 @@ export function SuiteProfile({ suiteId: propId }: { suiteId?: string } = {}) {
 
   if (!suite) return <div className="mx-auto max-w-4xl p-6">Loading suite…</div>;
 
-  const selectedVersion = paramVersion ?? latestSuiteVersion(suite.lineageId) ?? suite.version ?? "1.0";
-  const release = getSuiteRelease(suite.lineageId, selectedVersion);
+  const selectedVersion = paramVersion ?? suite.version ?? latestSuiteVersion(suite.lineageId) ?? "1.0";
+  const release = suite.release ?? getSuiteRelease(suite.lineageId, selectedVersion);
   
-  const versionString = release?.version ?? selectedVersion;
-  const uiStage = (release?.stage as any) || (suite.stage as any) || "draft";
+  const versionString = suite.release?.version ?? suite.version ?? release?.version ?? selectedVersion;
+  const uiStage = (suite.release?.stage as any) ?? (suite.stage as any) ?? (release?.stage as any) ?? "draft";
   const uiStageDisplay = STAGE_DISPLAY_MAP[uiStage] || uiStage;
   const language = release?.language || suite.language || "en";
   const tags = release?.tags || suite.tags || [];
@@ -94,10 +94,11 @@ export function SuiteProfile({ suiteId: propId }: { suiteId?: string } = {}) {
             </div>
 
             <VersionHeader 
-                versionString={versionString}
-                uiStageDisplay={uiStageDisplay}
-                uiStage={uiStage}
+                versionString={versionString} 
+                uiStage={uiStage} 
+                uiStageDisplay={uiStageDisplay} 
                 language={language}
+                isPendingFork={suite.familyEvent?.status === 'pending'}
                 switcher={
                     <SuiteVersionSwitcher 
                         id={suite.lineageId} 

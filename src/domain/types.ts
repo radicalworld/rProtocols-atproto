@@ -53,6 +53,8 @@ export interface NeedRecord {
     release?: {
         kind: "genesis" | "update" | "fork";
         bump: "major" | "minor" | "patch";
+        version?: string;
+        stage?: string;
     };
     familyEvent?: {
         type: "candidate-major-fork";
@@ -93,6 +95,8 @@ export interface ProtocolRecord {
     release?: {
         kind: "genesis" | "update" | "fork";
         bump: "major" | "minor" | "patch";
+        version?: string;
+        stage?: string;
     };
     familyEvent?: {
         type: "candidate-major-fork";
@@ -136,6 +140,8 @@ export interface SuiteRecord {
     release?: {
         kind: "genesis" | "update" | "fork";
         bump: "major" | "minor" | "patch";
+        version?: string;
+        stage?: string;
     };
     familyEvent?: {
         type: "candidate-major-fork";
@@ -191,6 +197,22 @@ export interface Need {
     };
     lineageId: string; // The opaque rp_nd_id
     slug: string;      // The human readable string
+    
+    version?: string;
+    stage?: "draft" | "candidate" | "stable" | "deprecated";
+
+    release?: {
+        kind: "genesis" | "update" | "fork";
+        bump: "major" | "minor" | "patch";
+        version?: string;
+        stage?: string;
+        summary?: string;
+        [key: string]: any;
+    };
+    familyEvent?: {
+        type: "candidate-major-fork";
+        status: "pending";
+    };
 
     title: string;     // Mapped from context
     description?: string;
@@ -210,6 +232,7 @@ export interface Need {
 
     followEnabled?: boolean;
     followCount?: number;
+    adoptCount?: number;
 }
 
 export interface NeedRelease {
@@ -261,6 +284,19 @@ export interface Suite {
   slug: string;
   version?: string;
   stage?: "draft" | "candidate" | "stable" | "deprecated";
+
+  release?: {
+      kind: "genesis" | "update" | "fork";
+      bump: "major" | "minor" | "patch";
+      version?: string;
+      stage?: string;
+      summary?: string;
+      [key: string]: any;
+  };
+  familyEvent?: {
+      type: "candidate-major-fork";
+      status: "pending";
+  };
   
   title: string;
   description?: string;
@@ -287,12 +323,30 @@ export interface Protocol {
   };
   lineageId: ProtocolRootId;
   slug: string;
+  version?: string;
+  stage?: "draft" | "candidate" | "stable" | "deprecated";
+
+  release?: {
+      kind: "genesis" | "update" | "fork";
+      bump: "major" | "minor" | "patch";
+      version?: string;
+      stage?: string;
+      summary?: string;
+      [key: string]: any;
+  };
+  familyEvent?: {
+      type: "candidate-major-fork";
+      status: "pending";
+  };
   
   title: string;
   summary?: string;
   body?: string;
   tags?: string[];
-  language?: string;                      
+  language?: string;
+
+  followCount?: number;
+  adoptCount?: number;
 }
 
 export interface ProtocolRelease {

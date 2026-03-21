@@ -385,14 +385,14 @@ class MockAdapter implements RPRepository {
         }
     }
 
-    async createNeed(payload: Pick<Need, "title" | "description" | "parentLineageId" | "purpose" | "language" | "tags"> & { forkFrom?: string }): Promise<NeedId> {
+    async createNeed(payload: Pick<Need, "title" | "description" | "parentLineageId" | "purpose" | "language" | "tags"> & { forkFrom?: string }, forceId?: string): Promise<NeedId> {
         let familyObj = (payload as any).family;
         if (payload.forkFrom) {
             const parent = this.findNeed(payload.forkFrom);
             if (parent && parent.family) familyObj = parent.family;
         }
 
-        const id = payload.title.toLowerCase().replace(/\s+/g, "-");
+        const id = forceId || payload.title.toLowerCase().replace(/\s+/g, "-");
         const newNeed: Need = {
             id,
             lineageId: `rp_${id}`,
@@ -424,14 +424,12 @@ class MockAdapter implements RPRepository {
             const parent = this.findSuite(payload.forkFrom);
             if (parent) {
                 if (parent.family) familyObj = parent.family;
-                let parentMajor = 1;
-                if (typeof suiteReleases !== 'undefined' && suiteReleases[parent.lineageId]) {
-                    const currentParts = suiteReleases[parent.lineageId].current.split(".");
-                    parentMajor = parseInt(currentParts[0] || "1", 10);
-                }
-                versionString = `${Math.max(1, parentMajor) + 1}.0.0`;
             }
         }
+
+        const isFork = !!payload.forkFrom;
+        const releaseRecord = isFork ? { kind: "fork", bump: "major" } : { kind: "genesis", bump: "patch" };
+        const familyEventRecord = isFork ? { type: "candidate-major-fork", status: "pending" } : undefined;
 
         const id = forceId || payload.title.toLowerCase().replace(/\s+/g, "-");
         suites[id] = {
@@ -445,8 +443,10 @@ class MockAdapter implements RPRepository {
             language: payload.language || "en",
             purpose: payload.purpose || "",
             includeProtocols: payload.includeProtocols || [],
-            family: familyObj || { id: `rp_fm_${id}`, origin: { uri: id, cid: "mock-origin" } }
-        };
+            family: familyObj || { id: `rp_fm_${id}`, origin: { uri: id, cid: "mock-origin" } },
+            release: releaseRecord,
+            familyEvent: familyEventRecord
+        } as Suite;
         
         if (payload.parentNeedLineageId) {
             await this.linkSuiteServesNeed(id, payload.parentNeedLineageId);
@@ -458,9 +458,7 @@ class MockAdapter implements RPRepository {
                 current: versionString,
                 releases: {
                     [versionString]: {
-                        ...clone(suites[id]),
-                        release: payload.forkFrom ? { kind: "fork", bump: "major" } : { kind: "genesis", bump: "patch" },
-                        familyEvent: payload.forkFrom ? { type: "candidate-major-fork", status: "pending" } : undefined
+                        ...clone(suites[id])
                     }
                 }
             };
@@ -486,14 +484,13 @@ class MockAdapter implements RPRepository {
             const parent = this.findProtocol(payload.forkFrom);
             if (parent) {
                 if (parent.family) familyObj = parent.family;
-                let parentMajor = 1;
-                if (typeof protocolReleases !== 'undefined' && (protocolReleases as any)[parent.lineageId]) {
-                    const currentParts = (protocolReleases as any)[parent.lineageId].current.split(".");
-                    parentMajor = parseInt(currentParts[0] || "1", 10);
-                }
-                versionString = `${Math.max(1, parentMajor) + 1}.0.0`;
             }
         }
+
+        // family and familyEvent handling
+        const isFork = !!payload.forkFrom;
+        const releaseRecord = isFork ? { kind: "fork", bump: "major" } : { kind: "genesis", bump: "patch" };
+        const familyEventRecord = isFork ? { type: "candidate-major-fork", status: "pending" } : undefined;
 
         const id = payload.title.toLowerCase().replace(/\s+/g, "-");
         protocols[id] = { 
@@ -502,11 +499,13 @@ class MockAdapter implements RPRepository {
             slug: id, 
             title: payload.title, 
             summary: payload.summary, 
-            body: payload.body || "", 
+            body: payload.body, 
             tags: payload.tags, 
             language: payload.language,
-            family: familyObj || { id: `rp_fm_${id}`, origin: { uri: id, cid: "mock-origin" } }
-        };
+            family: familyObj || { id: `rp_fm_${id}`, origin: { uri: id, cid: "mock-origin" } },
+            release: releaseRecord,
+            familyEvent: familyEventRecord
+        } as Protocol;
         
         // Seed the release bucket to 0.1.0 and register root mappings
         if (typeof protocolReleases !== 'undefined') {
@@ -515,7 +514,7 @@ class MockAdapter implements RPRepository {
                 releases: {
                     [versionString]: {
                         version: versionString,
-                        stage: "draft",
+                        sourceLineageId: undefined, // Update logic
                         createdAt: new Date().toISOString(),
                         tags: payload.tags,
                         language: payload.language,

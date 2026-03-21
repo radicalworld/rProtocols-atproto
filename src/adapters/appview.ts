@@ -22,7 +22,8 @@ export class AppViewAdapter implements RPReadPort {
 
     async getNeedByLineageId(lineageId: string): Promise<Need | null> {
         try {
-            const data = await xrpc('app.rp.entity.getCurrent', { lineageId, policy: 'latest-any' });
+            const cleanId = lineageId.replace(/^(rp_st_|rp_pr_|rp_nd_)/, "");
+            const data = await xrpc('app.rp.entity.getCurrent', { lineageId: cleanId, policy: 'latest-any' });
             if (data?.record) {
                 const n = data.record;
                 const bundledRels = n.bundledRelations || [];
@@ -34,6 +35,8 @@ export class AppViewAdapter implements RPReadPort {
                     id: n.slug || n.lineageId || n.uri || "",
                     lineageId: n.lineageId || n.uri || "",
                     slug: n.slug || n.lineageId || "",
+                    version: n.version,
+                    stage: n.stage || "draft",
                     title: n.title || n.question || "Untitled Need",
                     description: n.description || "",
                     language: n.language || "en",
@@ -42,6 +45,11 @@ export class AppViewAdapter implements RPReadPort {
                     relatedProtocolLineageIds,
                     childLineageIds,
                     parentLineageId: null,
+                    family: n.family,
+                    release: n.release,
+                    familyEvent: n.familyEvent,
+                    followCount: n.followCount || 0,
+                    adoptCount: n.adoptCount || 0
                 } as Need;
             }
         } catch (err) { console.error("AppView getNeedByLineageId error:", err); }
@@ -61,9 +69,16 @@ export class AppViewAdapter implements RPReadPort {
                     id: p.uri || p.slug || p.lineageId || "", 
                     lineageId: p.lineageId || p.uri || "",
                     slug: p.slug || "",
+                    version: p.version,
+                    stage: p.stage || "draft",
                     title: p.title || "",
                     summary: p.description || p.summary || "",
-                    body: p.protocolBody || p.body || ""
+                    body: p.protocolBody || p.body || "",
+                    family: p.family,
+                    release: p.release,
+                    familyEvent: p.familyEvent,
+                    followCount: p.followCount || 0,
+                    adoptCount: p.adoptCount || 0
                 }));
             }
         } catch (err) { console.error("AppView getProtocols error:", err); }
@@ -90,7 +105,12 @@ export class AppViewAdapter implements RPReadPort {
                         title: s.title || "Untitled Suite",
                         description: s.description || "",
                         language: s.language || "en",
-                        includeProtocols: s.members?.protocols?.map((p: any) => ({ lineageId: p.uri })) || []
+                        includeProtocols: s.members?.protocols?.map((p: any) => ({ lineageId: p.uri })) || [],
+                        family: s.family,
+                        release: s.release,
+                        familyEvent: s.familyEvent,
+                        followCount: s.followCount || 0,
+                        adoptCount: s.adoptCount || 0
                     });
                 }
             }
@@ -123,9 +143,16 @@ export class AppViewAdapter implements RPReadPort {
                         id: p.slug || p.lineageId || p.uri || "",
                         lineageId: p.lineageId || p.uri || "",
                         slug: p.slug || p.lineageId || "",
+                        version: p.version,
+                        stage: p.stage || "draft",
                         title: p.title || "Untitled Protocol",
                         summary: p.summary || "",
-                        body: p.protocolBody || p.body || ""
+                        body: p.protocolBody || p.body || "",
+                        family: p.family,
+                        release: p.release,
+                        familyEvent: p.familyEvent,
+                        followCount: p.followCount || 0,
+                        adoptCount: p.adoptCount || 0
                     });
                 }
             }
@@ -138,18 +165,24 @@ export class AppViewAdapter implements RPReadPort {
 
     async getProtocolBySlug(slug: string): Promise<Protocol | null> {
         try {
-            // For now, if passed a lineageId, query by lineageId directly. 
-            // A real slug lookup requires an index over 'slug' which the backend might just resolve in getRecord
-            const data = await xrpc('app.rp.entity.getCurrent', { lineageId: slug, policy: 'latest-any' });
+            const cleanId = slug.replace(/^(rp_st_|rp_pr_|rp_nd_)/, "");
+            const data = await xrpc('app.rp.entity.getCurrent', { lineageId: cleanId, policy: 'latest-any' });
             if (data?.record) {
                 const p = data.record;
                 return {
                     id: p.slug || p.lineageId || p.uri || "", 
                     lineageId: p.lineageId || p.uri || "",
                     slug: p.slug || "",
+                    version: p.version,
+                    stage: p.stage || "draft",
                     title: p.title || "",
                     summary: p.description || p.summary || "",
-                    body: p.protocolBody || p.body || ""
+                    body: p.protocolBody || p.body || "",
+                    family: p.family,
+                    release: p.release,
+                    familyEvent: p.familyEvent,
+                    followCount: p.followCount || 0,
+                    adoptCount: p.adoptCount || 0
                 };
             }
         } catch (err) { console.error("AppView getProtocolBySlug error:", err); }
@@ -210,7 +243,12 @@ export class AppViewAdapter implements RPReadPort {
                         slug: p.slug || p.lineageId || "",
                         title: p.title || "Untitled Protocol",
                         summary: p.summary || p.description || "",
-                        body: p.protocolBody || p.body || ""
+                        body: p.protocolBody || p.body || "",
+                        family: p.family,
+                        release: p.release,
+                        familyEvent: p.familyEvent,
+                        followCount: p.followCount || 0,
+                        adoptCount: p.adoptCount || 0
                     });
                 }
             }
@@ -227,19 +265,27 @@ export class AppViewAdapter implements RPReadPort {
     async getMarks() { return []; }
     async getSuite(suiteId: string): Promise<Suite | null> {
         try {
-            const data = await xrpc('app.rp.entity.getCurrent', { lineageId: suiteId, policy: 'latest-any' });
+            const cleanId = suiteId.replace(/^(rp_st_|rp_pr_|rp_nd_)/, "");
+            const data = await xrpc('app.rp.entity.getCurrent', { lineageId: cleanId, policy: 'latest-any' });
             if (data?.record) {
                 const s = data.record;
                 return {
                     id: s.slug || s.lineageId || s.uri || "",
                     lineageId: s.lineageId || s.uri || "",
                     slug: s.slug || s.lineageId || "",
+                    version: s.version,
+                    stage: s.stage || "draft",
                     title: s.title || "Untitled Suite",
                     description: s.description || s.summary || "",
                     purpose: s.purpose || "",
                     language: s.language || "en",
                     tags: s.tags || [],
-                    includeProtocols: s.members?.protocols?.map((p: any) => ({ lineageId: p.uri })) || []
+                    includeProtocols: s.members?.protocols?.map((p: any) => ({ lineageId: p.uri })) || [],
+                    family: s.family,
+                    release: s.release,
+                    familyEvent: s.familyEvent,
+                    followCount: s.followCount || 0,
+                    adoptCount: s.adoptCount || 0
                 } as Suite;
             }
         } catch (err) { console.error("AppView getSuite error:", err); }

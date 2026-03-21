@@ -1,4 +1,7 @@
 import { AtpAgent } from "@atproto/api";
+import { AppViewAdapter } from "./appview";
+
+const appViewAdapter = new AppViewAdapter();
 import type { RPReadPort, RPWritePort } from "@/domain/ports";
 import type { Mark, MarkVerb, Protocol, Need } from "@/domain/types";
 import type { NeedRelease } from "@/features/needs/lib/releases";
@@ -72,6 +75,7 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
     
     async follow(subjectId: string, kind: "need" | "protocol" | "suite"): Promise<void> {
         if (!this.viewerDid) return;
+        const cleanId = subjectId.replace(/^(rp_st_|rp_pr_|rp_nd_)/, "");
         await this.agent.com.atproto.repo.createRecord({
             repo: this.viewerDid,
             collection: NS.mark,
@@ -80,7 +84,7 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
                 verb: "follow",
                 subject: {
                     kind,
-                    lineageId: subjectId,
+                    lineageId: cleanId,
                     pinMode: "floating-stable"
                 },
                 status: "active",
@@ -91,10 +95,11 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
 
     async unfollow(subjectId: string, kind: "need" | "protocol" | "suite"): Promise<void> {
         if (!this.viewerDid) return;
+        const cleanId = subjectId.replace(/^(rp_st_|rp_pr_|rp_nd_)/, "");
         // find a follow mark for this subject
         const recs = await listAll(this.agent, this.viewerDid, NS.mark);
         const hit = recs.find(
-            (r: any) => r.value?.verb === "follow" && r.value?.subject?.lineageId === subjectId
+            (r: any) => r.value?.verb === "follow" && (r.value?.subject?.lineageId === cleanId || r.value?.subject?.lineageId === subjectId)
         );
         if (!hit) return;
         // at://did/collection/rkey  -> rkey is last segment
@@ -109,6 +114,7 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
 
     async adopt(subjectId: string, kind: "need" | "protocol" | "suite", context?: string): Promise<void> {
         if (!this.viewerDid) return;
+        const cleanId = subjectId.replace(/^(rp_st_|rp_pr_|rp_nd_)/, "");
         await this.agent.com.atproto.repo.createRecord({
             repo: this.viewerDid,
             collection: "org.rp.mark",
@@ -117,7 +123,7 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
                 verb: "adopt",
                 subject: {
                     kind,
-                    lineageId: subjectId,
+                    lineageId: cleanId,
                     pinMode: "floating-stable"
                 },
                 context,
@@ -185,15 +191,17 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
     // Write port native implementations
     async createNeed(payload: Pick<Need, "title" | "description" | "parentLineageId"> & { forkFrom?: string }, forceId?: string): Promise<string> { 
         if (!this.viewerDid) throw new Error("Not authenticated");
-        const rootId = forceId || payload.title.toLowerCase().replace(/\s+/g, "-");
+        const cleanRootId = forceId ? forceId.replace(/^(rp_nd_|rp_pr_|rp_st_)/, "") : payload.title.toLowerCase().replace(/\s+/g, "-");
+        const rootId = forceId || `rp_nd_${cleanRootId}`;
         
         let familyObj = undefined;
         let versionString = "0.1.0";
         if (payload.forkFrom) {
-             const parent = await this.getNeedByLineageId?.(payload.forkFrom);
-             if (parent) {
-                 if (parent.family) familyObj = parent.family;
-                 versionString = "2.0.0"; // Arbitrary major jump for PDS initialization
+             const cleanForkId = payload.forkFrom.replace(/^(rp_nd_|rp_pr_|rp_st_)/, "");
+             let parent = await appViewAdapter.getNeedByLineageId?.(cleanForkId);
+             if (!parent || !parent.family) parent = await mockRepo.getNeedByLineageId(cleanForkId);
+             if (parent && parent.family) {
+                 familyObj = parent.family;
              }
         }
         
@@ -203,15 +211,17 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
     
     async createProtocol(payload: Pick<Protocol, "title" | "summary" | "body" | "tags" | "language"> & { forkFrom?: string }, forceId?: string): Promise<string> { 
         if (!this.viewerDid) throw new Error("Not authenticated");
-        const rootId = forceId || payload.title.toLowerCase().replace(/\s+/g, "-");
+        const cleanRootId = forceId ? forceId.replace(/^(rp_nd_|rp_pr_|rp_st_)/, "") : payload.title.toLowerCase().replace(/\s+/g, "-");
+        const rootId = forceId || `rp_pr_${cleanRootId}`;
         
         let familyObj = undefined;
         let versionString = "0.1.0";
         if (payload.forkFrom) {
-             const parent = await this.getProtocol(payload.forkFrom);
-             if (parent) {
-                 if (parent.family) familyObj = parent.family;
-                 versionString = "2.0.0";
+             const cleanForkId = payload.forkFrom.replace(/^(rp_nd_|rp_pr_|rp_st_)/, "");
+             let parent = await appViewAdapter.getProtocol(cleanForkId);
+             if (!parent || !parent.family) parent = await mockRepo.getProtocol(cleanForkId);
+             if (parent && parent.family) {
+                 familyObj = parent.family;
              }
         }
         
@@ -235,11 +245,14 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
     async updateNeedDraft(rootId: string, version: string, patch: Partial<NeedRelease>): Promise<void> {
         if (!this.viewerDid) return;
 
-        // In a real implementation, we would fetch the existing record first to merge.
-        // For this hybrid implementation, the mock handles state, we just echo a new putRecord.
-        // We use rootId as the rkey namespace (or generate a specific rkey based on version).
-        
-        const rkey = getDeterministicRkey(rootId, version);
+        const cleanRootId = rootId.replace(/^(rp_nd_|rp_st_|rp_pr_)/, "");
+        const rkey = getDeterministicRkey(cleanRootId, version);
+
+        let existingFamily = (patch as any).family;
+        if (!existingFamily) {
+             let existing = await appViewAdapter.getNeedByLineageId?.(cleanRootId) || await mockRepo.getNeedByLineageId(cleanRootId);
+             if (existing && existing.family) existingFamily = existing.family;
+        }
 
         const dummyCid = await cidString("mock");
         try {
@@ -250,15 +263,16 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
                 record: {
                     $type: "org.rp.need",
                     lineage: {
-                        id: rootId,
-                        root: { uri: `at://${this.viewerDid}/org.rp.need/${rootId}`, cid: dummyCid }
+                        id: cleanRootId,
+                        root: { uri: `at://${this.viewerDid}/org.rp.need/${cleanRootId}`, cid: dummyCid },
+                        ...((patch as any).forkFrom ? { forkedFrom: { uri: (patch as any).forkFrom, cid: dummyCid } } : {})
                     },
-                    slug: rootId,
+                    slug: cleanRootId,
                     version: version,
                     stage: "draft",
                     createdAt: new Date().toISOString(),
                     language: patch.language ?? "en",
-                    family: (patch as any).family ?? { id: `rp_fm_${rootId}`, origin: { uri: `at://${this.viewerDid}/org.rp.need/${rootId}`, cid: dummyCid } },
+                    family: existingFamily ?? { id: `rp_fm_${cleanRootId}`, origin: { uri: `at://${this.viewerDid}/org.rp.need/${cleanRootId}`, cid: dummyCid } },
                     release: (patch as any).forkFrom ? { kind: "fork", bump: "major" } : { kind: "genesis", bump: "patch" },
                     ...((patch as any).forkFrom ? { familyEvent: { type: "candidate-major-fork", status: "pending" } } : {}),
                     authorship: {
@@ -278,6 +292,18 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
             });
             
             console.log(`PDS: Successfully broadcasted org.rp.need draft update to PDS under rkey: ${rkey}`);
+            
+            // Also notify mock repo to keep it in sync locally
+            await mockRepo.createNeed({
+                title: patch.title || rootId,
+                description: patch.description || "",
+                purpose: patch.purpose || "",
+                language: patch.language || "en",
+                tags: patch.tags || [],
+                parentLineageId: (patch as any).parentLineageId,
+                forkFrom: (patch as any).forkFrom,
+                family: (patch as any).family
+            } as any, rootId);
         } catch (e: any) {
             console.error("PDS Save Error:", e);
             throw e; // re-throw so the UI hook knows it failed
@@ -316,7 +342,15 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
     async updateProtocolDraft(rootId: string, version: string, patch: any): Promise<void> {
         if (!this.viewerDid) return;
 
-        const rkey = getDeterministicRkey(rootId, version);
+        const cleanRootId = rootId.replace(/^(rp_pr_|rp_st_|rp_nd_)/, "");
+        const rkey = getDeterministicRkey(cleanRootId, version);
+        
+        let existingFamily = patch.family;
+        if (!existingFamily) {
+             let existing = await appViewAdapter.getProtocol(cleanRootId) || await mockRepo.getProtocol(cleanRootId);
+             if (existing && existing.family) existingFamily = existing.family;
+        }
+
         const dummyCid = await cidString("mock");
         try {
             await this.agent.com.atproto.repo.putRecord({
@@ -326,15 +360,16 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
                 record: {
                     $type: "org.rp.protocol",
                     lineage: {
-                        id: rootId,
-                        root: { uri: `at://${this.viewerDid}/org.rp.protocol/${rootId}`, cid: dummyCid }
+                        id: cleanRootId,
+                        root: { uri: `at://${this.viewerDid}/org.rp.protocol/${cleanRootId}`, cid: dummyCid },
+                        ...(patch.forkFrom ? { forkedFrom: { uri: patch.forkFrom, cid: dummyCid } } : {})
                     },
-                    slug: rootId,
+                    slug: cleanRootId,
                     version: version,
                     stage: "draft",
                     createdAt: new Date().toISOString(),
                     language: patch.language ?? "en",
-                    family: patch.family ?? { id: `rp_fm_${rootId}`, origin: { uri: `at://${this.viewerDid}/org.rp.protocol/${rootId}`, cid: dummyCid } },
+                    family: existingFamily ?? { id: `rp_fm_${cleanRootId}`, origin: { uri: `at://${this.viewerDid}/org.rp.protocol/${cleanRootId}`, cid: dummyCid } },
                     release: patch.forkFrom ? { kind: "fork", bump: "major" } : { kind: "genesis", bump: "patch" },
                     ...(patch.forkFrom ? { familyEvent: { type: "candidate-major-fork", status: "pending" } } : {}),
                     authorship: {
@@ -349,6 +384,17 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
                 },
             });
             console.log(`PDS: Successfully broadcasted org.rp.protocol draft update to PDS under rkey: ${rkey}`);
+            
+            // Also notify mock repo to keep it in sync locally
+            await mockRepo.createProtocol({
+                title: patch.title || rootId,
+                summary: patch.summary || "",
+                body: patch.protocolBody || (patch as any).body || "",
+                tags: patch.tags || [],
+                language: patch.language || "en",
+                forkFrom: patch.forkFrom,
+                family: patch.family
+            } as any, rootId);
         } catch (e: any) {
             console.error("PDS Save Error (Protocol):", e);
             throw e;
@@ -382,16 +428,18 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
     async createSuite(payload: any, forceId?: string): Promise<string> {
         if (!this.viewerDid) throw new Error("Not logged in");
         
-        const rootId = forceId ? `rp_st_${forceId}` : `rp_st_${Math.random().toString(36).slice(2, 10)}`;
+        const cleanRootId = forceId ? forceId.replace(/^(rp_nd_|rp_pr_|rp_st_)/, "") : Math.random().toString(36).slice(2, 10);
+        const rootId = `rp_st_${cleanRootId}`;
         const rkey = `rpv${Math.random().toString(36).slice(2, 7)}`;
         
         let familyObj = undefined;
         let versionString = "0.1.0";
         if (payload.forkFrom) {
-             const parent = await this.getSuite(payload.forkFrom);
-             if (parent) {
-                 if (parent.family) familyObj = parent.family;
-                 versionString = "2.0.0";
+             const cleanForkId = payload.forkFrom.replace(/^(rp_nd_|rp_pr_|rp_st_)/, "");
+             let parent = await appViewAdapter.getSuite(cleanForkId);
+             if (!parent || !parent.family) parent = await mockRepo.getSuite(cleanForkId);
+             if (parent && parent.family) {
+                 familyObj = parent.family;
              }
         }
         
@@ -403,15 +451,16 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
                 record: {
                     $type: "org.rp.suite",
                     lineage: {
-                        id: rootId,
-                        root: { uri: `at://${this.viewerDid}/org.rp.suite/${rootId}`, cid: "mock" }
+                        id: cleanRootId,
+                        root: { uri: `at://${this.viewerDid}/org.rp.suite/${cleanRootId}`, cid: "mock" },
+                        ...(payload.forkFrom ? { forkedFrom: { uri: payload.forkFrom.replace(/^(rp_nd_|rp_pr_|rp_st_)/, ""), cid: "mock" } } : {})
                     },
-                    slug: rootId,
+                    slug: cleanRootId,
                     version: versionString,
                     stage: "draft",
                     createdAt: new Date().toISOString(),
                     language: payload.language ?? "en",
-                    family: familyObj ?? { id: `rp_fm_${rootId}`, origin: { uri: `at://${this.viewerDid}/org.rp.suite/${rootId}`, cid: "mock" } },
+                    family: familyObj ?? { id: `rp_fm_${cleanRootId}`, origin: { uri: `at://${this.viewerDid}/org.rp.suite/${cleanRootId}`, cid: "mock" } },
                     release: payload.forkFrom ? { kind: "fork", bump: "major" } : { kind: "genesis", bump: "patch" },
                     ...(payload.forkFrom ? { familyEvent: { type: "candidate-major-fork", status: "pending" } } : {}),
                     authorship: {
@@ -450,7 +499,8 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
                     $type: "org.rp.suite",
                     lineage: {
                         id: rootId,
-                        root: { uri: `at://${this.viewerDid}/org.rp.suite/${rootId}`, cid: dummyCid }
+                        root: { uri: `at://${this.viewerDid}/org.rp.suite/${rootId}`, cid: dummyCid },
+                        ...(patch.forkFrom ? { forkedFrom: { uri: patch.forkFrom, cid: dummyCid } } : {})
                     },
                     slug: rootId,
                     version: version,
