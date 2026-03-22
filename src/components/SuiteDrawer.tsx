@@ -85,14 +85,11 @@ export function SuiteDrawer({
                 ) : (
                     <div className="p-8 pb-16 flex-1 flex flex-col gap-8 mt-4">
                         <div>
-                            <div className="flex items-start gap-3 mb-1.5">
-                                <SuiteIcon className="text-blue-600 w-6 h-6 flex-shrink-0 mt-0.5" />
-                                <h2 className="text-xl font-bold text-gray-900 leading-tight pr-8">
-                                    Grounding Protocols
+                            <div className="flex items-start gap-3 mb-4">
+                                <SuiteIcon className="text-blue-600 w-7 h-7 flex-shrink-0 mt-0.5" />
+                                <h2 className="text-2xl font-bold text-gray-900 leading-tight pr-8">
+                                    {suite.title}
                                 </h2>
-                            </div>
-                            <div className="text-[17px] text-gray-600 pl-9 mb-5 font-medium leading-snug">
-                                {suite.title}
                             </div>
                             
                             <VersionHeader 
@@ -105,7 +102,7 @@ export function SuiteDrawer({
 
                         {suite.description && (
                             <div>
-                                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-2">Purpose</h3>
+                                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-2">Grounding Protocols</h3>
                                 <p className="text-[15px] text-gray-700 leading-relaxed whitespace-pre-wrap">
                                     {suite.description}
                                 </p>
