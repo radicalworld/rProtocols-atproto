@@ -61,10 +61,10 @@ export function FoundationSelector({
                     disabled={disabled || loading}
                 >
                     {loading ? (
-                        <option value="suite-root-protocols">Loading protocols...</option>
+                        <option value="rp_suite-root-protocols">Loading protocols...</option>
                     ) : (
                         <>
-                            <option value="suite-root-protocols">Core Proto-Protocols Suite</option>
+                            <option value="rp_suite-root-protocols">Core Proto-Protocols</option>
                             {uniqueSuites
                                 .filter(s => s.lineageId !== "suite-root-protocols" && s.lineageId !== "rp_suite-root-protocols")
                                 .map(s => (

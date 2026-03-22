@@ -30,12 +30,12 @@ export function FoundationLink({ foundationRef }: { foundationRef?: StrongRef })
                 
                 if (alive) {
                     if (suite) {
-                         setTitle(suite.title || "Core Proto-Protocols Suite");
+                         setTitle(suite.title || "Core Proto-Protocols");
                          setSlug(suite.slug || cleanId);
                     } else {
                          // Fallback for mocks missing specific fetch bridges
                          if (cleanId === "suite-root-protocols" || rawUri.includes("suite-root-protocols")) {
-                             setTitle("Core Proto-Protocols Suite");
+                             setTitle("Core Proto-Protocols");
                              setSlug("suite-root-protocols");
                          } else {
                              setTitle("Archived Foundation");
