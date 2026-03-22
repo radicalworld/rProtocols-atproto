@@ -79,7 +79,7 @@ export function FoundationSelector({
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                 </div>
             </div>
-            <p className="text-xs text-gray-500 mt-1.5">Select the foundational system granting semantic derivation context.</p>
+            <p className="text-xs text-gray-500 mt-1.5">Foundational patterns for creating, evolving, and sharing.</p>
             
             <SuiteDrawer 
                 suiteId={value || "suite-root-protocols"} 

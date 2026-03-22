@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { X, ChevronDown, ChevronUp } from "lucide-react";
 import { useRepo } from "@/domain/repo";
 import type { Suite, Protocol } from "@/domain/types";
 import { SuiteIcon } from "@/components/icons/SuiteIcon";
@@ -18,6 +18,7 @@ export function SuiteDrawer({
     const [suite, setSuite] = useState<Suite | null>(null);
     const [loading, setLoading] = useState(false);
     const [protocols, setProtocols] = useState<Protocol[]>([]);
+    const [expandedProtoId, setExpandedProtoId] = useState<string | null>(null);
 
     useEffect(() => {
         if (!isOpen || !suiteId) return;
@@ -84,11 +85,14 @@ export function SuiteDrawer({
                 ) : (
                     <div className="p-8 pb-16 flex-1 flex flex-col gap-8 mt-4">
                         <div>
-                            <div className="flex items-start gap-3 mb-4">
-                                <SuiteIcon className="text-blue-600 w-7 h-7 flex-shrink-0 mt-0.5" />
-                                <h2 className="text-2xl font-bold text-gray-900 leading-tight pr-8">
-                                    {suite.title}
+                            <div className="flex items-start gap-3 mb-1.5">
+                                <SuiteIcon className="text-blue-600 w-6 h-6 flex-shrink-0 mt-0.5" />
+                                <h2 className="text-xl font-bold text-gray-900 leading-tight pr-8">
+                                    Grounding Protocols
                                 </h2>
+                            </div>
+                            <div className="text-[17px] text-gray-600 pl-9 mb-5 font-medium leading-snug">
+                                {suite.title}
                             </div>
                             
                             <VersionHeader 
@@ -139,10 +143,36 @@ export function SuiteDrawer({
                                                 )}
                                             </div>
                                             <div className="pb-4 flex-1">
-                                                <div className="font-semibold text-gray-900 text-[15px] mb-1 leading-tight">{p.title || p.slug}</div>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setExpandedProtoId(expandedProtoId === p.lineageId ? null : p.lineageId)}
+                                                    className="w-full group text-left flex items-start justify-between gap-2 focus:outline-none mb-1"
+                                                >
+                                                    <div className="font-semibold text-gray-900 group-hover:text-blue-600 text-[15px] leading-tight transition-colors">
+                                                        {p.title || p.slug}
+                                                    </div>
+                                                    {expandedProtoId === p.lineageId ? (
+                                                        <ChevronUp className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
+                                                    ) : (
+                                                        <ChevronDown className="w-4 h-4 text-gray-400 shrink-0 mt-0.5 group-hover:text-blue-500 transition-colors" />
+                                                    )}
+                                                </button>
+                                                
                                                 <div className="text-sm text-gray-600 leading-relaxed max-w-none prose prose-blue prose-sm text-opacity-90">
                                                     {p.summary || "No summary provided."}
                                                 </div>
+
+                                                {expandedProtoId === p.lineageId && (
+                                                    <div className="mt-4 pt-4 border-t border-gray-100 text-[15px] text-gray-800 leading-relaxed transition-all animate-in fade-in slide-in-from-top-2">
+                                                        {p.body ? (
+                                                            <div className="prose prose-sm prose-blue max-w-none prose-headings:font-semibold prose-a:text-blue-600 prose-p:leading-relaxed whitespace-pre-wrap">
+                                                                {p.body}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="italic text-gray-500">No protocol body content specified.</span>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         </li>
                                     ))}
