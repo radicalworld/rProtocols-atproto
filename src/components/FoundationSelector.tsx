@@ -34,7 +34,7 @@ export function FoundationSelector({
     return (
         <label className="block mt-4 mb-2">
             <div className="text-sm font-medium text-gray-700">
-                Grounded in (Foundation Ref) {disabled ? <span className="text-xs text-gray-400 font-normal ml-1">(Locked)</span> : ""}
+                Grounding Protocols
             </div>
             <select
                 className={`mt-1.5 w-full text-base rounded-xl border border-gray-300 p-2.5 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none ${disabled ? "bg-gray-50 text-gray-400 cursor-not-allowed" : ""}`}
@@ -43,7 +43,7 @@ export function FoundationSelector({
                 disabled={disabled || loading}
             >
                 {loading ? (
-                    <option value="suite-root-protocols">Loading foundations...</option>
+                    <option value="suite-root-protocols">Loading protocols...</option>
                 ) : (
                     <>
                         <option value="suite-root-protocols">Core Proto-Protocols Suite</option>
@@ -55,7 +55,7 @@ export function FoundationSelector({
                     </>
                 )}
             </select>
-            <p className="text-xs text-gray-500 mt-1">Select the parent Suite providing foundational context.</p>
+            <p className="text-xs text-gray-500 mt-1">Select the foundational system granting semantic derivation context.</p>
         </label>
     );
 }

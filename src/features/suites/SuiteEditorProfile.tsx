@@ -356,6 +356,12 @@ export default function SuiteEditorProfile({
                 />
             </label>
 
+            <FoundationSelector 
+                value={form.foundationRefURI || ""} 
+                onChange={uri => setForm(prev => ({ ...prev, foundationRefURI: uri }))} 
+                disabled={!canEdit || saving}
+            />
+
             <div className="pt-4 border-t border-gray-100">
                 <div className="text-sm font-medium text-gray-700 mb-3">Protocol Requirements</div>
 
