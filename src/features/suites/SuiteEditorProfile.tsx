@@ -272,7 +272,7 @@ export default function SuiteEditorProfile({
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => setIsSaveModalOpen(true)}
-                            disabled={!canEdit || saving || !hasChanges}
+                            disabled={!canEdit || saving || !hasChanges || !form.title.trim()}
                             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50"
                         >
                             Publish
