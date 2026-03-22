@@ -12,6 +12,7 @@ import { getNeedRelease, latestNeedVersion, listNeedReleases } from "@/features/
 import { NeedVersionSwitcher } from "@/features/needs/components/NeedVersionSwitcher";
 import { VersionHeader } from "@/components/VersionHeader";
 import { NeedIcon } from "@/components/icons/NeedIcon";
+import { FoundationLink } from "@/components/FoundationLink";
 import { Edit } from "lucide-react";
 import { useSession } from "@/features/auth/SessionProvider";
 import NeedEditorProfile from "@/features/needs/components/NeedEditorProfile";
@@ -126,6 +127,8 @@ export function NeedProfile() {
             </header>
 
             {purpose && <p className="text-lg text-gray-600 leading-relaxed italic">{purpose}</p>}
+
+            <FoundationLink foundationRef={(n as any).foundationRef || (release as any)?.foundationRef} />
 
             <div className="my-4 border-t border-gray-100" />
 

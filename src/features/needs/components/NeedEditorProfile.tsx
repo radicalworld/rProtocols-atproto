@@ -13,6 +13,7 @@ import { X } from "lucide-react";
 import { formatVersion, STAGE_DISPLAY_MAP, parseVersion } from "@/lib/version";
 import { VersionHeader } from "@/components/VersionHeader";
 import { NeedIcon } from "@/components/icons/NeedIcon";
+import { FoundationSelector } from "@/components/FoundationSelector";
 import {
     Dialog,
     DialogContent,
@@ -41,7 +42,7 @@ export default function NeedEditorProfile({
     const repo = useRepo();
     const nav = useNavigate();
 
-    const [form, setForm] = useState({ title: "", description: "", purpose: "", language: "", tags: "", changeDescription: "" });
+    const [form, setForm] = useState({ title: "", description: "", purpose: "", language: "", tags: "", foundationRefURI: "suite-root-protocols", changeDescription: "" });
     const [saving, setSaving] = useState(false);
     const [msg, setMsg] = useState("");
     const [isInitialized, setIsInitialized] = useState(false);
@@ -62,6 +63,7 @@ export default function NeedEditorProfile({
                 purpose: release.purpose ?? "",
                 language: release.language ?? "en",
                 tags: release.tags ? release.tags.join(", ") : "",
+                foundationRefURI: release.foundationRef?.uri || "suite-root-protocols",
                 changeDescription: ""
             });
             setTargetStage(release.stage as any);
@@ -86,6 +88,7 @@ export default function NeedEditorProfile({
                     purpose: parent.purpose || "",
                     language: parent.language || "en",
                     tags: parent.tags ? (Array.isArray(parent.tags) ? parent.tags.join(", ") : parent.tags) : "",
+                    foundationRefURI: parent.foundationRef?.uri || "suite-root-protocols",
                 }));
             }
         })();
@@ -127,9 +130,10 @@ export default function NeedEditorProfile({
                     purpose: form.purpose,
                     language: form.language || "en",
                     tags: Array.isArray(form.tags) ? form.tags : form.tags.split(",").map(t => t.trim()).filter(Boolean),
+                    foundationRef: { uri: form.foundationRefURI },
                     parentLineageId: parentLineageId || undefined,
                     forkFrom: forkFrom || undefined
-                });
+                } as any);
                 
                 // Automatically set the author to follow their new creation
                 const gen = await repo.getNeedByLineageId(nid) || await (repo as any).getNeedByVersion(nid, "1.0");
@@ -155,7 +159,8 @@ export default function NeedEditorProfile({
 
                 const changes = {
                     ...form,
-                    tags: "tags" in form && typeof form.tags === "string" ? form.tags.split(",").map(t => t.trim()).filter(Boolean) : []
+                    tags: "tags" in form && typeof form.tags === "string" ? form.tags.split(",").map(t => t.trim()).filter(Boolean) : [],
+                    foundationRef: { uri: form.foundationRefURI }
                 };
                 await updateDraft(targetVer, changes);
                 
@@ -276,6 +281,12 @@ export default function NeedEditorProfile({
                     disabled={!canEdit || saving}
                 />
             </label>
+
+            <FoundationSelector 
+                value={form.foundationRefURI} 
+                onChange={(uri) => setForm({ ...form, foundationRefURI: uri })}
+                disabled={!canEdit || saving} 
+            />
 
             <label className="block" htmlFor="need-description">
                 <div className="text-sm font-medium text-gray-700 mb-1">Description (Markdown)</div>

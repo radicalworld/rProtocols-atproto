@@ -15,6 +15,7 @@ import { latestSuiteVersion, getSuiteRelease, listSuiteReleases } from "@/featur
 import { SuiteVersionSwitcher } from "@/features/suites/components/SuiteVersionSwitcher";
 import { SuiteIcon } from "@/components/icons/SuiteIcon";
 import { VersionHeader } from "@/components/VersionHeader";
+import { FoundationLink } from "@/components/FoundationLink";
 
 export function SuiteProfile({ suiteId: propId }: { suiteId?: string } = {}) {
   const { id: paramId = "", version: paramVersion } = useParams();
@@ -115,6 +116,9 @@ export function SuiteProfile({ suiteId: propId }: { suiteId?: string } = {}) {
           {contentDescription && (
               <p className="text-lg text-gray-600 leading-relaxed">{contentDescription}</p>
           )}
+
+          <FoundationLink foundationRef={(suite as any).foundationRef || (release as any)?.foundationRef} />
+
           {/* Main Body: Protocols List */}
           <div className="mt-8 pt-8 border-t border-gray-100">
             <h2 className="text-xl font-bold tracking-tight text-gray-900 mb-6 flex items-center gap-2">

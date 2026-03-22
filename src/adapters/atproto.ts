@@ -3,7 +3,7 @@ import { AppViewAdapter } from "./appview";
 
 const appViewAdapter = new AppViewAdapter();
 import type { RPReadPort, RPWritePort } from "@/domain/ports";
-import type { Mark, MarkVerb, Protocol, Need } from "@/domain/types";
+import type { Mark, MarkVerb, Protocol, Need, Suite } from "@/domain/types";
 import type { NeedRelease } from "@/features/needs/lib/releases";
 import { cidString } from "@/lib/cid";
 import { mockRepo } from "@/adapters/mock";
@@ -50,6 +50,10 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
     ) {}
 
     async getProtocols(options?: { suiteId?: string; ancestorId?: string; }): Promise<Protocol[]> {
+        return [];
+    }
+
+    async getSuites(): Promise<Suite[]> {
         return [];
     }
 
@@ -195,17 +199,17 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
         const rootId = forceId || `rp_nd_${cleanRootId}`;
         
         let familyObj = undefined;
+        let foundationRefObj = undefined;
         let versionString = "0.1.0";
         if (payload.forkFrom) {
              const cleanForkId = payload.forkFrom.replace(/^(rp_nd_|rp_pr_|rp_st_)/, "");
              let parent = await appViewAdapter.getNeedByLineageId?.(cleanForkId);
              if (!parent || !parent.family) parent = await mockRepo.getNeedByLineageId(cleanForkId);
-             if (parent && parent.family) {
-                 familyObj = parent.family;
-             }
+             if (parent && parent.family) familyObj = parent.family;
+             if (parent && parent.foundationRef) foundationRefObj = parent.foundationRef;
         }
         
-        await this.updateNeedDraft(rootId, versionString, { ...payload, parentLineageId: payload.parentLineageId ?? null, family: familyObj, forkFrom: payload.forkFrom } as any);
+        await this.updateNeedDraft(rootId, versionString, { ...payload, parentLineageId: payload.parentLineageId ?? null, foundationRef: foundationRefObj || (payload as any).foundationRef, family: familyObj, forkFrom: payload.forkFrom } as any);
         return rootId;
     }
     
@@ -215,17 +219,17 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
         const rootId = forceId || `rp_pr_${cleanRootId}`;
         
         let familyObj = undefined;
+        let foundationRefObj = undefined;
         let versionString = "0.1.0";
         if (payload.forkFrom) {
              const cleanForkId = payload.forkFrom.replace(/^(rp_nd_|rp_pr_|rp_st_)/, "");
              let parent = await appViewAdapter.getProtocol(cleanForkId);
              if (!parent || !parent.family) parent = await mockRepo.getProtocol(cleanForkId);
-             if (parent && parent.family) {
-                 familyObj = parent.family;
-             }
+             if (parent && parent.family) familyObj = parent.family;
+             if (parent && parent.foundationRef) foundationRefObj = parent.foundationRef;
         }
         
-        await this.updateProtocolDraft(rootId, versionString, { ...payload, family: familyObj, forkFrom: payload.forkFrom });
+        await this.updateProtocolDraft(rootId, versionString, { ...payload, foundationRef: foundationRefObj || (payload as any).foundationRef, family: familyObj, forkFrom: payload.forkFrom });
         return rootId;
     }
     
@@ -272,6 +276,7 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
                     stage: "draft",
                     createdAt: new Date().toISOString(),
                     language: patch.language ?? "en",
+                    foundationRef: (patch as any).foundationRef || { uri: "suite-root-protocols", cid: "mock" },
                     family: existingFamily ?? { id: `rp_fm_${cleanRootId}`, origin: { uri: `at://${this.viewerDid}/org.rp.need/${cleanRootId}`, cid: dummyCid } },
                     release: (patch as any).forkFrom ? { kind: "fork", bump: "major" } : { kind: "genesis", bump: "patch" },
                     ...((patch as any).forkFrom ? { familyEvent: { type: "candidate-major-fork", status: "pending" } } : {}),
@@ -433,14 +438,14 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
         const rkey = `rpv${Math.random().toString(36).slice(2, 7)}`;
         
         let familyObj = undefined;
+        let foundationRefObj = undefined;
         let versionString = "0.1.0";
         if (payload.forkFrom) {
              const cleanForkId = payload.forkFrom.replace(/^(rp_nd_|rp_pr_|rp_st_)/, "");
              let parent = await appViewAdapter.getSuite(cleanForkId);
              if (!parent || !parent.family) parent = await mockRepo.getSuite(cleanForkId);
-             if (parent && parent.family) {
-                 familyObj = parent.family;
-             }
+             if (parent && parent.family) familyObj = parent.family;
+             if (parent && parent.foundationRef) foundationRefObj = parent.foundationRef;
         }
         
         try {
@@ -460,6 +465,7 @@ export class AtprotoAdapter implements RPReadPort, RPWritePort {
                     stage: "draft",
                     createdAt: new Date().toISOString(),
                     language: payload.language ?? "en",
+                    foundationRef: foundationRefObj || payload.foundationRef || { uri: "suite-root-protocols", cid: "mock" },
                     family: familyObj ?? { id: `rp_fm_${cleanRootId}`, origin: { uri: `at://${this.viewerDid}/org.rp.suite/${cleanRootId}`, cid: "mock" } },
                     release: payload.forkFrom ? { kind: "fork", bump: "major" } : { kind: "genesis", bump: "patch" },
                     ...(payload.forkFrom ? { familyEvent: { type: "candidate-major-fork", status: "pending" } } : {}),

@@ -8,6 +8,7 @@ import { X, UserCircle2 } from "lucide-react";
 import { formatVersion, STAGE_DISPLAY_MAP } from "@/lib/version";
 import { VersionHeader } from "@/components/VersionHeader";
 import { ProtocolIcon } from "@/components/icons/ProtocolIcon";
+import { FoundationSelector } from "@/components/FoundationSelector";
 
 export default function ProtocolEditorProfile({
     protocolId: propRootId,
@@ -30,7 +31,7 @@ export default function ProtocolEditorProfile({
     // Fallback to a blank state immediately if 'isNew' is enforced
     const draft = useMemo(() => isNew ? { rootId: "new", version: "0.1.0", stage: "draft", title: "", summary: "", body: "", language: "en", tags: [] } as any : fetchedDraft, [isNew, fetchedDraft]);
 
-    const [form, setForm] = useState({ title: "", summary: "", body: "", language: "", tags: "", changeDescription: "" });
+    const [form, setForm] = useState({ title: "", summary: "", body: "", language: "", tags: "", foundationRefURI: "suite-root-protocols", changeDescription: "" });
     const [saving, setSaving] = useState(false);
     
     // Modal State
@@ -52,6 +53,7 @@ export default function ProtocolEditorProfile({
                 body: draft.body ?? "",
                 language: draft.language ?? "en",
                 tags: draft.tags ? (Array.isArray(draft.tags) ? draft.tags.join(", ") : draft.tags) : "",
+                foundationRefURI: draft.foundationRef?.uri || "suite-root-protocols",
                 changeDescription: "" // Reset per modal publish open
             });
             // Setup defaults for Modal
@@ -77,6 +79,7 @@ export default function ProtocolEditorProfile({
                     body: parent.body || "",
                     language: parent.language || "en",
                     tags: parent.tags ? (Array.isArray(parent.tags) ? parent.tags.join(", ") : parent.tags) : "",
+                    foundationRefURI: parent.foundationRef?.uri || "suite-root-protocols",
                 }));
             }
         })();
@@ -129,6 +132,7 @@ export default function ProtocolEditorProfile({
                 body: form.body,
                 language: form.language,
                 tags: form.tags.split(",").map(t => t.trim()).filter(Boolean),
+                foundationRef: { uri: form.foundationRefURI },
                 changeDescription: form.changeDescription || undefined
             };
             
@@ -139,8 +143,9 @@ export default function ProtocolEditorProfile({
                     body: form.body,
                     tags: Array.isArray(form.tags) ? form.tags : form.tags.split(",").map(t => t.trim()).filter(Boolean),
                     language: form.language || "en",
+                    foundationRef: { uri: form.foundationRefURI },
                     forkFrom: forkFrom || undefined
-                });
+                } as any);
                 if (parentNeedId) {
                     await repo.linkProtocolServesNeed(pid, parentNeedId);
                 }
@@ -271,6 +276,12 @@ export default function ProtocolEditorProfile({
                     disabled={!canEdit || saving}
                 />
             </label>
+
+            <FoundationSelector 
+                value={form.foundationRefURI} 
+                onChange={(uri) => setForm({ ...form, foundationRefURI: uri })}
+                disabled={!canEdit || saving} 
+            />
 
             <label className="block" htmlFor="protocol-body">
                 <div className="text-sm font-medium text-gray-700 mb-1">Body (Markdown)</div>

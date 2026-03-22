@@ -45,6 +45,7 @@ export class AppViewAdapter implements RPReadPort {
                     relatedProtocolLineageIds,
                     childLineageIds,
                     parentLineageId: null,
+                    foundationRef: n.foundationRef,
                     family: n.family,
                     release: n.release,
                     familyEvent: n.familyEvent,
@@ -74,6 +75,7 @@ export class AppViewAdapter implements RPReadPort {
                     title: p.title || "",
                     summary: p.description || p.summary || "",
                     body: p.protocolBody || p.body || "",
+                    foundationRef: p.foundationRef,
                     family: p.family,
                     release: p.release,
                     familyEvent: p.familyEvent,
@@ -82,6 +84,32 @@ export class AppViewAdapter implements RPReadPort {
                 }));
             }
         } catch (err) { console.error("AppView getProtocols error:", err); }
+        return [];
+    }
+
+    async getSuites(): Promise<Suite[]> {
+        try {
+            const data = await xrpc('app.rp.graph.listRecentChanges', { kind: 'suite', limit: 100 });
+            if (data?.records) {
+                return data.records.map((p: any) => ({
+                    id: p.uri || p.slug || p.lineageId || "", 
+                    lineageId: p.lineageId || p.uri || "",
+                    slug: p.slug || "",
+                    version: p.version,
+                    stage: p.stage || "draft",
+                    title: p.title || "",
+                    description: p.description || p.purpose || "",
+                    language: p.language || "en",
+                    foundationRef: p.foundationRef,
+                    family: p.family,
+                    release: p.release,
+                    familyEvent: p.familyEvent,
+                    followCount: p.followCount || 0,
+                    adoptCount: p.adoptCount || 0,
+                    tags: p.tags || []
+                }));
+            }
+        } catch (err) { console.error("AppView getSuites error:", err); }
         return [];
     }
 
@@ -106,6 +134,7 @@ export class AppViewAdapter implements RPReadPort {
                         description: s.description || "",
                         language: s.language || "en",
                         includeProtocols: s.members?.protocols?.map((p: any) => ({ lineageId: p.uri })) || [],
+                        foundationRef: s.foundationRef,
                         family: s.family,
                         release: s.release,
                         familyEvent: s.familyEvent,
@@ -148,6 +177,7 @@ export class AppViewAdapter implements RPReadPort {
                         title: p.title || "Untitled Protocol",
                         summary: p.summary || "",
                         body: p.protocolBody || p.body || "",
+                        foundationRef: p.foundationRef,
                         family: p.family,
                         release: p.release,
                         familyEvent: p.familyEvent,
@@ -178,6 +208,7 @@ export class AppViewAdapter implements RPReadPort {
                     title: p.title || "",
                     summary: p.description || p.summary || "",
                     body: p.protocolBody || p.body || "",
+                    foundationRef: p.foundationRef,
                     family: p.family,
                     release: p.release,
                     familyEvent: p.familyEvent,
@@ -244,6 +275,7 @@ export class AppViewAdapter implements RPReadPort {
                         title: p.title || "Untitled Protocol",
                         summary: p.summary || p.description || "",
                         body: p.protocolBody || p.body || "",
+                        foundationRef: p.foundationRef,
                         family: p.family,
                         release: p.release,
                         familyEvent: p.familyEvent,
@@ -281,6 +313,7 @@ export class AppViewAdapter implements RPReadPort {
                     language: s.language || "en",
                     tags: s.tags || [],
                     includeProtocols: s.members?.protocols?.map((p: any) => ({ lineageId: p.uri })) || [],
+                    foundationRef: s.foundationRef,
                     family: s.family,
                     release: s.release,
                     familyEvent: s.familyEvent,

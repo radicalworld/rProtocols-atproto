@@ -19,6 +19,7 @@ import ProtocolEditorProfile from "@/features/protocols/components/ProtocolEdito
 import { useSession } from "@/features/auth/SessionProvider";
 import { VersionHeader } from "@/components/VersionHeader";
 import { ProtocolIcon } from "@/components/icons/ProtocolIcon";
+import { FoundationLink } from "@/components/FoundationLink";
 
 export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } = {}) {
     const { id: paramId = "", version: paramVersion } = useParams();
@@ -174,6 +175,8 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
                         </header>
 
                         {(p.summary || release?.summary) && <p className="text-lg text-gray-600 leading-relaxed">{p.summary || release?.summary}</p>}
+
+                        <FoundationLink foundationRef={(p as any).foundationRef || (release as any)?.foundationRef} />
 
                         {/* Body of the Protocol */}
                         {body ? (

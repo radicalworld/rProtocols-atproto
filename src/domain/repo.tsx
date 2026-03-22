@@ -58,6 +58,13 @@ export function RepoProvider({ children, repo }: { children: React.ReactNode; re
             return res || (mockRepo as any).getSuiteWithActiveMerge(id);
         };
 
+        baseReader.getSuites = async () => {
+            if (useMockFirst) return (mockRepo as any).getSuites();
+            const res = await (appViewAdapter as any).getSuites();
+            if (res && res.length > 0) return res;
+            return (mockRepo as any).getSuites();
+        };
+
         baseReader.getProtocols = async () => {
             if (useMockFirst) return mockRepo.getProtocols();
             const res = await appViewAdapter.getProtocols();
@@ -142,6 +149,7 @@ export function RepoProvider({ children, repo }: { children: React.ReactNode; re
             hybrid.getNeedsBySection = baseReader.getNeedsBySection;
             hybrid.getSuitesForNeed = baseReader.getSuitesForNeed;
             hybrid.getSuite = baseReader.getSuite;
+            hybrid.getSuites = baseReader.getSuites;
             hybrid.getSuiteProtocols = baseReader.getSuiteProtocols;
             hybrid.getMarks = at.getMarks.bind(at);
             hybrid.follow = at.follow.bind(at);

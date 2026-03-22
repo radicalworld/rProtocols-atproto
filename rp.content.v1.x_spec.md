@@ -1,4 +1,4 @@
-# `org.rp.v1.3` Specification
+# `org.rp.v1.4` Specification
 
 The **rProtocols V1 Schema** defines a lineage-based data model for collaboratively creating, evolving, and adopting Needs, Protocols, Suites, and Marks across the ATProto network.
 
@@ -112,6 +112,33 @@ Suite    rp_st_<opaqueId>
 Mark     rp_mk_<opaqueId>
 ```
 
+### 2.4 Foundation Reference
+
+A Foundation Reference links a record to a Suite that provides foundational orientation for how the record is understood and engaged with.
+
+```ts
+
+foundationRef?: StrongRef
+```
+
+**Semantics**
+* foundationRef points to a Suite that expresses the foundational proto-protocol context of the record.
+* It makes visible the interpretive ground within which the record is being created and held.
+* It does not enforce behavior.
+* It provides orientation.
+* It may be retained, replaced, or removed in later versions or forks.
+
+**Constraints**
+* If present, foundationRef MUST reference an org.rp.suite record.
+* The referenced Suite SHOULD contain proto-protocols, foundational protocols, or other orienting records.
+* Records MUST remain valid if foundationRef is omitted.
+
+**Client Guidance**
+* Clients SHOULD prepopulate new Needs, Protocols, and Suites with a default foundationRef.
+* The default foundation MAY be determined by the client, workspace, community, or participant context.
+* Clients SHOULD make the presence of the foundation visible at creation time.
+* Clients SHOULD allow the foundation to be viewed, replaced, forked, or removed without blocking creation.
+
 ## 3. Atomic Structure
 
 ### 3.1 Need (`org.rp.need`)
@@ -119,6 +146,13 @@ Mark     rp_mk_<opaqueId>
 ```ts
 {
     $type: "org.rp.need",
+
+    foundationRef?: StrongRef,
+
+    family: {
+        id: "rp_fm_01JQ...",
+        origin: StrongRef
+    },
 
     lineage: {
         id: "rp_nd_01JQ...",
@@ -178,6 +212,8 @@ Mark     rp_mk_<opaqueId>
 ```ts
 {
     $type: "org.rp.protocol",
+
+    foundationRef?: StrongRef,
 
     family: {
         id: "rp_fm_01JQ...",
@@ -243,6 +279,8 @@ Mark     rp_mk_<opaqueId>
 ```ts
 {
     $type: "org.rp.suite",
+
+    foundationRef?: StrongRef,
 
     family: {
         id: "rp_fm_01JQ...",
@@ -423,6 +461,22 @@ draft → candidate → stable → deprecated
 * **stable** → broadly usable
 * **deprecated** → no longer recommended
 
+### 7.1 Foundation Context
+
+The interpretive context of a Need, Protocol, or Suite MAY be made explicit through foundationRef.
+
+**Meaning**
+* A foundation expresses the orienting proto-protocol context within which a record is being created or understood.
+* A foundation is not external to the protocol system.
+* Foundations are themselves forkable, evolvable records.
+* Referencing a foundation does not make that foundation fixed or authoritative.
+
+**Constraints**
+* A record MAY inherit a foundation from the client environment in which it was created.
+* A participant MAY retain the default foundation, replace it, remove it, or fork it.
+* A change to foundationRef SHOULD produce a new version when it materially changes the interpretive context of the record.
+* A participant MAY fork a record rather than update it when changing the foundation results in meaningful conceptual divergence.
+
 ## 8. Identity Model
 
 **Layer** | **Meaning**
@@ -459,6 +513,25 @@ slug | human-readable reference
 * compute adoption signals
 * expose recommendation policies
 
+### 10.1 AppView Responsibilities for Foundations
+
+**AppViews SHOULD:**
+* resolve and display foundationRef when present
+* make the referenced foundation inspectable
+* distinguish between canonical record data and client defaults
+* support filtering or grouping by foundation
+* allow participants to trace records that share a common foundation
+* make foundation changes visible across versions and forks
+
+**AppViews MAY:**
+* show whether a record uses a client-provided default foundation
+* show whether the referenced foundation has itself been forked or evolved
+* surface related records using the same foundation
+
+**AppViews MUST NOT:**
+* treat the presence of foundationRef as proof of validity, quality, or adoption
+* assume that records without foundationRef are invalid
+
 ## 11. Marks
 
 ### 11.1 Structure
@@ -484,6 +557,20 @@ exact | fixed version
 floating-lineage-stable | latest stable in a lineage
 floating-family-stable | AppView-selected stable in a family
 
+### 11.3 Terminology Note on Foundations
+
+foundationRef is intended to make visible the orienting ground of a record.
+
+It SHOULD be understood as:
+* a visible starting context
+* an explicit interpretive reference
+* a forkable and evolvable part of the protocol ecosystem
+
+It SHOULD NOT be understood as:
+* a mandatory ideological commitment
+* a hidden system default
+* a fixed authority outside the protocol graph
+
 ## 12. Terminology Alignment
 
 **Instead of** | **Use**
@@ -497,6 +584,12 @@ execution | participation
 * `rkey` → **slug**
 
 ## 13. Summary
+
+**org.rp.v1.4 adds:**
+* explicit foundational references through foundationRef
+* visible grounding for new Needs, Protocols, and Suites
+* client-default foundation behavior without schema rigidity
+* support for inspectable, removable, replaceable, and forkable foundations
 
 **org.rp.v1.3 establishes:**
 

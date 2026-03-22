@@ -42,6 +42,7 @@ export type VersionRange = {
 // ==============================
 export interface NeedRecord {
     $type: "org.rp.need";
+    foundationRef?: StrongRef;
     family?: {
         id: string;
         origin: StrongRef;
@@ -84,6 +85,7 @@ export interface NeedRecord {
 
 export interface ProtocolRecord {
     $type: "org.rp.protocol";
+    foundationRef?: StrongRef;
     family?: {
         id: string;
         origin: StrongRef;
@@ -129,6 +131,7 @@ export interface ProtocolRecord {
 
 export interface SuiteRecord {
     $type: "org.rp.suite";
+    foundationRef?: StrongRef;
     family?: {
         id: string;
         origin: StrongRef;
@@ -191,6 +194,7 @@ export interface MarkRecord {
 // Canonical Need (Life Need) (CID'ed content)
 export interface Need {
     id: string; // SQLite URI or mock ID
+    foundationRef?: StrongRef;
     family?: {
         id: string;
         origin: StrongRef;
@@ -276,6 +280,7 @@ export interface NeedRelease {
 
 export interface Suite {
   id: string;
+  foundationRef?: StrongRef;
   family?: {
       id: string;
       origin: StrongRef;
@@ -317,6 +322,7 @@ export interface Suite {
 
 export interface Protocol {
   id: string; // the uri
+  foundationRef?: StrongRef;
   family?: {
       id: string;
       origin: StrongRef;

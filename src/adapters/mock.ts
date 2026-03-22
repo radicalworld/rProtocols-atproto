@@ -325,6 +325,18 @@ class MockAdapter implements RPRepository {
         });
     }
 
+    async getSuites(): Promise<Suite[]> {
+        return Object.values(suites).map(s => {
+            let active = s;
+            if (typeof suiteReleases !== 'undefined' && suiteReleases[s.lineageId]) {
+                const bucket = suiteReleases[s.lineageId];
+                const snap = bucket.releases[bucket.current];
+                if (snap) active = { ...s, ...snap };
+            }
+            return clone(active);
+        });
+    }
+
     async getProtocolsForNeed(needId: NeedId): Promise<Protocol[]> {
         return clone(protocolsForNeed(needId));
     }
@@ -385,11 +397,13 @@ class MockAdapter implements RPRepository {
         }
     }
 
-    async createNeed(payload: Pick<Need, "title" | "description" | "parentLineageId" | "purpose" | "language" | "tags"> & { forkFrom?: string }, forceId?: string): Promise<NeedId> {
+    async createNeed(payload: Pick<Need, "title" | "description" | "parentLineageId" | "purpose" | "language" | "tags"> & { forkFrom?: string, foundationRef?: any }, forceId?: string): Promise<NeedId> {
         let familyObj = (payload as any).family;
+        let foundationRefObj = payload.foundationRef || { uri: "suite-root-protocols", cid: "mock" };
         if (payload.forkFrom) {
             const parent = this.findNeed(payload.forkFrom);
             if (parent && parent.family) familyObj = parent.family;
+            if (parent && parent.foundationRef) foundationRefObj = parent.foundationRef;
         }
 
         const id = forceId || payload.title.toLowerCase().replace(/\s+/g, "-");
@@ -404,6 +418,7 @@ class MockAdapter implements RPRepository {
             childLineageIds: [],
             suiteLineageIds: [],
             relatedProtocolLineageIds: [],
+            foundationRef: foundationRefObj,
             family: familyObj || { id: `rp_fm_${id}`, origin: { uri: id, cid: "mock-origin" } }
         };
         (newNeed as any).version = "0.1.0";
@@ -417,13 +432,15 @@ class MockAdapter implements RPRepository {
         return id;
     }
 
-    async createSuite(payload: Pick<Suite, "title" | "purpose" | "tags" | "language" | "includeProtocols"> & { parentNeedLineageId?: string, forkFrom?: string }, forceId?: string): Promise<string> {
+    async createSuite(payload: Pick<Suite, "title" | "purpose" | "tags" | "language" | "includeProtocols"> & { parentNeedLineageId?: string, forkFrom?: string, foundationRef?: any }, forceId?: string): Promise<string> {
         let familyObj = (payload as any).family;
+        let foundationRefObj = payload.foundationRef || { uri: "suite-root-protocols", cid: "mock" };
         let versionString = "0.1.0";
         if (payload.forkFrom) {
             const parent = this.findSuite(payload.forkFrom);
             if (parent) {
                 if (parent.family) familyObj = parent.family;
+                if (parent.foundationRef) foundationRefObj = parent.foundationRef;
             }
         }
 
@@ -443,6 +460,7 @@ class MockAdapter implements RPRepository {
             language: payload.language || "en",
             purpose: payload.purpose || "",
             includeProtocols: payload.includeProtocols || [],
+            foundationRef: foundationRefObj,
             family: familyObj || { id: `rp_fm_${id}`, origin: { uri: id, cid: "mock-origin" } },
             release: releaseRecord,
             familyEvent: familyEventRecord
@@ -477,13 +495,15 @@ class MockAdapter implements RPRepository {
         saveToLocal();
     }
 
-    async createProtocol(payload: Pick<Protocol, "title" | "summary" | "body" | "tags" | "language"> & { family?: any, forkFrom?: string }): Promise<ProtocolId> {
+    async createProtocol(payload: Pick<Protocol, "title" | "summary" | "body" | "tags" | "language"> & { family?: any, forkFrom?: string, foundationRef?: any }): Promise<ProtocolId> {
         let familyObj = payload.family;
+        let foundationRefObj = payload.foundationRef || { uri: "suite-root-protocols", cid: "mock" };
         let versionString = "0.1.0";
         if (payload.forkFrom) {
             const parent = this.findProtocol(payload.forkFrom);
             if (parent) {
                 if (parent.family) familyObj = parent.family;
+                if (parent.foundationRef) foundationRefObj = parent.foundationRef;
             }
         }
 
@@ -500,8 +520,9 @@ class MockAdapter implements RPRepository {
             title: payload.title, 
             summary: payload.summary, 
             body: payload.body, 
-            tags: payload.tags, 
-            language: payload.language,
+            tags: payload.tags || [],
+            language: payload.language || "en",
+            foundationRef: foundationRefObj,
             family: familyObj || { id: `rp_fm_${id}`, origin: { uri: id, cid: "mock-origin" } },
             release: releaseRecord,
             familyEvent: familyEventRecord

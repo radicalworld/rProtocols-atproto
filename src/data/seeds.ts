@@ -29,7 +29,7 @@ export const protocols: Record<string, Protocol> = {
 export const suites: Record<string, Suite> = {
     "suite-root-protocols": {
         id: "suite-root-protocols", lineageId: "rp_suite-root-protocols", slug: "suite-root-protocols",
-        title: "Collaborative Protocols",
+        title: "Core Proto-Protocols Suite",
         language: "en",
         tags: ["collaboration", "architecture", "patterns"],
         description: "Foundational patterns for creating, evolving, and sharing.",

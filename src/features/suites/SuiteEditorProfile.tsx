@@ -9,6 +9,7 @@ import { Protocol } from "@/domain/types";
 import { parseVersion } from "@/lib/version";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { X, Search, PlusCircle, Trash2, GripVertical } from "lucide-react";
+import { FoundationSelector } from "@/components/FoundationSelector";
 
 export default function SuiteEditorProfile({
     rootId: propRootId,
@@ -46,6 +47,7 @@ export default function SuiteEditorProfile({
                 purpose: (s as any).purpose || (s as any).description || "",
                 language: s.language,
                 tags: s.tags,
+                foundationRefURI: (s as any).foundationRef?.uri || "suite-root-protocols",
                 includeProtocols: protocols.map(p => ({ lineageId: p.id, title: p.title, slug: p.slug }))
             });
         })();
@@ -60,7 +62,7 @@ export default function SuiteEditorProfile({
         slug: string;
     }
 
-    const [form, setForm] = useState({ title: "", purpose: "", language: "", tags: "", protocols: [] as ProtocolLink[], changeDescription: "" });
+    const [form, setForm] = useState({ title: "", purpose: "", language: "", tags: "", foundationRefURI: "suite-root-protocols", protocols: [] as ProtocolLink[], changeDescription: "" });
     
     // Clone parent data natively if Genesis Fork
     const forkFrom = searchParams.get("forkFrom");
@@ -77,6 +79,7 @@ export default function SuiteEditorProfile({
                     purpose: (parent as any).purpose || parent.description || "",
                     language: parent.language || "en",
                     tags: parent.tags ? (Array.isArray(parent.tags) ? parent.tags.join(", ") : parent.tags) : "",
+                    foundationRefURI: (parent as any).foundationRef?.uri || "suite-root-protocols",
                     protocols: parentProtocols.map(p => ({ lineageId: p.id, title: p.title, slug: p.slug }))
                 }));
             }
@@ -104,6 +107,7 @@ export default function SuiteEditorProfile({
                 purpose: release.purpose ?? "",
                 language: release.language ?? "en",
                 tags: release.tags ? (Array.isArray(release.tags) ? release.tags.join(", ") : String(release.tags)) : "",
+                foundationRefURI: release.foundationRef?.uri || "suite-root-protocols",
                 protocols: release.includeProtocols || [],
                 changeDescription: ""
             });
