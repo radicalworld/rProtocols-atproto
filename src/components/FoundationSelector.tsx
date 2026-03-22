@@ -36,6 +36,8 @@ export function FoundationSelector({
         return () => { alive = false; };
     }, [repo]);
 
+    const uniqueSuites = Array.from(new Map(suites.map(s => [s.lineageId, s])).values());
+
     return (
         <div className="mt-4 mb-2">
             <div className="text-sm font-medium text-gray-700 mb-1.5">
@@ -53,11 +55,13 @@ export function FoundationSelector({
                     ) : (
                         <>
                             <option value="suite-root-protocols">Core Proto-Protocols Suite</option>
-                            {suites.filter(s => s.lineageId !== "suite-root-protocols").map(s => (
-                                <option key={s.lineageId} value={s.lineageId}>
-                                    {s.title || s.lineageId}
-                                </option>
-                            ))}
+                            {uniqueSuites
+                                .filter(s => s.lineageId !== "suite-root-protocols" && s.lineageId !== "rp_suite-root-protocols")
+                                .map(s => (
+                                    <option key={s.lineageId} value={s.lineageId}>
+                                        {s.title || s.lineageId}
+                                    </option>
+                                ))}
                         </>
                     )}
                 </select>
