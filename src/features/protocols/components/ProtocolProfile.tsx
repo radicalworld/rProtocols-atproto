@@ -165,6 +165,7 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
                                     <ProtocolVersionSwitcher 
                                         id={p.id} 
                                         currentVersion={versionString} 
+                                        uiStage={uiStage as any}
                                         onChange={(v) => {
                                             const base = location.pathname.split("/versions/")[0];
                                             nav(`${base}/versions/${v}`);
