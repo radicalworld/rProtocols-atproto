@@ -226,7 +226,7 @@ export default function ProtocolEditorProfile({
                 </div>
 
                 {!isNew && (
-                    <div className="mx-auto max-w-3xl -mb-2">
+                    <div className="-mb-2">
                         <VersionHeader 
                             versionString={draft.version!}
                             uiStageDisplay={STAGE_DISPLAY_MAP[targetStage as string] || targetStage}
