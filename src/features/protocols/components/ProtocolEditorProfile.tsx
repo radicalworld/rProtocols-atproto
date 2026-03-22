@@ -14,12 +14,14 @@ export default function ProtocolEditorProfile({
     protocolId: propRootId,
     parentNeedId,
     isNew = false,
-    onClose
+    onClose,
+    onDraftChange
 }: {
     protocolId?: string;
     parentNeedId?: string | null;
     isNew?: boolean;
     onClose?: () => void;
+    onDraftChange?: (draft: { tags: string[], foundationRefURI: string }) => void;
 } = {}) {
     const params = useParams();
     const rootId = propRootId || params.id || (isNew ? "new" : "");
@@ -33,6 +35,16 @@ export default function ProtocolEditorProfile({
 
     const [form, setForm] = useState({ title: "", summary: "", body: "", language: "", tags: "", foundationRefURI: "suite-root-protocols", changeDescription: "" });
     const [saving, setSaving] = useState(false);
+
+    // Sync draft states upward to parent Profile Viewers mapping live inputs to static panels
+    useEffect(() => {
+        if (onDraftChange) {
+            const arr = Array.isArray(form.tags) 
+                ? (form.tags as string[]) 
+                : form.tags.split(",").map(t => t.trim()).filter(Boolean);
+            onDraftChange({ tags: arr, foundationRefURI: form.foundationRefURI });
+        }
+    }, [form.tags, form.foundationRefURI, onDraftChange]);
     
     // Modal State
     const [searchParams] = useSearchParams();

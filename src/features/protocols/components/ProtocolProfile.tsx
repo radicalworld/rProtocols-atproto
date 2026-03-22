@@ -33,6 +33,9 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
     const [p, setP] = useState<Protocol | null>(null);
     const [notFound, setNotFound] = useState(false);
     
+    // Live-binding state catching local draft changes rendering natively into static viewer panels concurrently.
+    const [draftState, setDraftState] = useState<{tags: string[], uri: string} | null>(null);
+
     // Wire up dynamic tracking overlays to combat stale static JSON caches
     const { isFollowed } = useFollowed(p?.id ?? "", "protocol");
     const { adopted: isAdopted } = useAdopted(p?.id ?? "", "protocol");
@@ -83,8 +86,6 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
     // normalize stage names
     const rawStage = release?.stage;
     const computedStageFallback = major === 0 ? "draft" : "stable";
-    
-    console.log("[DEBUG: ProtocolProfile] Rendering Profile:", { p_id: p.id, selectedVersion, stage_from_release: rawStage, fallback: computedStageFallback });
 
     const uiStage: "draft" | "candidate" | "stable" | "archived" =
         rawStage === "candidate"
@@ -98,7 +99,10 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
     const body = p.body || release?.protocolBody || "";
     const canAdopt = release?.adoptEnabled ?? true;
     const versions = listReleases(p.id);
-    const tags = release?.tags ?? (p as any).tags ?? [];
+    
+    // Intercept draft state directly overwriting static database representations
+    const tags = isEditing && draftState ? draftState.tags : (release?.tags ?? (p as any).tags ?? []);
+    
     const purpose = release?.purpose ?? p.summary ?? "";
     const date = release?.date ?? "";
     const language = release?.language || p.language || "en";
@@ -121,6 +125,8 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
     const related = release?.relatedProtocols ?? [];
     const history = release?.history ?? [];
     const attribution = release?.attribution ?? [];
+    
+    const displayFoundationUri = isEditing && draftState ? draftState.uri : ((p as any).foundationRef?.uri || (release as any)?.foundationRef?.uri || "rp_suite-root-protocols");
 
     if (notFound) return <Navigate to="/404" replace />;
 
@@ -132,7 +138,11 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
             {/* Left Column: Editor & Body */}
             <div className="space-y-6">
                 {isEditing ? (
-                    <ProtocolEditorProfile protocolId={p.id} onClose={() => nav("..", { relative: "path" })} />
+                    <ProtocolEditorProfile 
+                        protocolId={p.id} 
+                        onClose={() => nav("..", { relative: "path" })} 
+                        onDraftChange={(draft) => setDraftState({ tags: draft.tags, uri: draft.foundationRefURI })}
+                    />
                 ) : (
                     <>
                         <header className="flex flex-col gap-4">
@@ -177,7 +187,7 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
 
                         {(p.summary || release?.summary) && <p className="text-lg text-gray-600 leading-relaxed">{p.summary || release?.summary}</p>}
 
-                        <FoundationLink foundationRef={(p as any).foundationRef || (release as any)?.foundationRef || { uri: "rp_suite-root-protocols" }} />
+                        <FoundationLink foundationRef={{ uri: displayFoundationUri, cid: "" }} />
 
                         {/* Body of the Protocol */}
                         {body ? (
