@@ -211,14 +211,15 @@ export default function ProtocolEditorProfile({
                     </div>
                     <div className="flex items-center gap-2">
                         <button
-                            onClick={() => setIsSaveModalOpen(true)}
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); setIsSaveModalOpen(true); }}
                             disabled={!hasChanges}
                             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50"
                         >
                             {isNew ? "Create" : "Publish"}
                         </button>
                         {onClose && (
-                            <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-500 rounded-full hover:bg-gray-100 transition-colors">
+                            <button type="button" onClick={(e) => { e.preventDefault(); onClose(); }} className="p-2 text-gray-400 hover:text-gray-500 rounded-full hover:bg-gray-100 transition-colors">
                                 <X className="h-5 w-5" />
                             </button>
                         )}

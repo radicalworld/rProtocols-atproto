@@ -140,7 +140,7 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
                 {isEditing ? (
                     <ProtocolEditorProfile 
                         protocolId={p.id} 
-                        onClose={() => nav("..", { relative: "path" })} 
+                        onClose={() => nav(`/${sectionId}/protocols/${encodeURIComponent(p.id)}`)} 
                         onDraftChange={(draft) => setDraftState({ tags: draft.tags, uri: draft.foundationRefURI })}
                     />
                 ) : (
