@@ -98,7 +98,7 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
     const body = p.body || release?.protocolBody || "";
     const canAdopt = release?.adoptEnabled ?? true;
     const versions = listReleases(p.id);
-    const tags = release?.tags ?? [];
+    const tags = release?.tags ?? (p as any).tags ?? [];
     const purpose = release?.purpose ?? p.summary ?? "";
     const date = release?.date ?? "";
     const language = release?.language || p.language || "en";
@@ -176,7 +176,7 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
 
                         {(p.summary || release?.summary) && <p className="text-lg text-gray-600 leading-relaxed">{p.summary || release?.summary}</p>}
 
-                        <FoundationLink foundationRef={(p as any).foundationRef || (release as any)?.foundationRef} />
+                        <FoundationLink foundationRef={(p as any).foundationRef || (release as any)?.foundationRef || { uri: "rp_suite-root-protocols" }} />
 
                         {/* Body of the Protocol */}
                         {body ? (

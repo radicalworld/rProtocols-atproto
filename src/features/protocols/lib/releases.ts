@@ -14,18 +14,21 @@ export type ReleasesBucket = {
 };
 
 export function latestVersion(id: string): VersionString | undefined {
-  return (protocolReleases as Record<string, ReleasesBucket>)[id]?.current;
+  const cleanId = id.replace(/^(rp_pr_|rp_st_|rp_nd_)/, "");
+  return (protocolReleases as Record<string, ReleasesBucket>)[cleanId]?.current;
 }
 
 export function listReleases(id: string): ProtocolRelease[] {
-  const bucket = (protocolReleases as Record<string, ReleasesBucket>)[id];
+  const cleanId = id.replace(/^(rp_pr_|rp_st_|rp_nd_)/, "");
+  const bucket = (protocolReleases as Record<string, ReleasesBucket>)[cleanId];
   if (!bucket) return [];
   // newest version first
   return Object.values(bucket.releases).sort((a, b) => -cmpVersion(a.version, b.version));
 }
 
 export function getRelease(id: string, version?: VersionString): ProtocolRelease | undefined {
-  const bucket = (protocolReleases as Record<string, ReleasesBucket>)[id];
+  const cleanId = id.replace(/^(rp_pr_|rp_st_|rp_nd_)/, "");
+  const bucket = (protocolReleases as Record<string, ReleasesBucket>)[cleanId];
   if (!bucket) return undefined;
   const v = (version ?? bucket.current) as VersionString | undefined;
   return v ? bucket.releases[v] : undefined;

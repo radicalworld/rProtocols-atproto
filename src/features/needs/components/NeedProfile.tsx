@@ -128,7 +128,7 @@ export function NeedProfile() {
 
             {purpose && <p className="text-lg text-gray-600 leading-relaxed italic">{purpose}</p>}
 
-            <FoundationLink foundationRef={(n as any).foundationRef || (release as any)?.foundationRef} />
+            <FoundationLink foundationRef={(n as any).foundationRef || (release as any)?.foundationRef || { uri: "rp_suite-root-protocols" }} />
 
             <div className="my-4 border-t border-gray-100" />
 

@@ -117,7 +117,7 @@ export function SuiteProfile({ suiteId: propId }: { suiteId?: string } = {}) {
               <p className="text-lg text-gray-600 leading-relaxed">{contentDescription}</p>
           )}
 
-          <FoundationLink foundationRef={(suite as any).foundationRef || (release as any)?.foundationRef} />
+          <FoundationLink foundationRef={(suite as any).foundationRef || (release as any)?.foundationRef || { uri: "rp_suite-root-protocols" }} />
 
           {/* Main Body: Protocols List */}
           <div className="mt-8 pt-8 border-t border-gray-100">
