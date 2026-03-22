@@ -224,7 +224,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         content: content,
         editorProps: {
             attributes: {
-                class: 'prose prose-neutral max-w-none min-h-[500px] w-full p-2 lg:p-4 outline-none',
+                class: 'prose prose-sm prose-neutral max-w-none min-h-[500px] w-full p-2 lg:p-4 outline-none',
             },
         },
         onUpdate: ({ editor }) => {
