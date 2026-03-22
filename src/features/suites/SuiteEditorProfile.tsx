@@ -136,7 +136,8 @@ export default function SuiteEditorProfile({
     const nextMinor = `${major}.${minor + 1}.0`;
     const nextMajor = `${major + 1}.0.0`;
 
-    const isStageBump = !isNew && release && targetStage !== release.stage;
+    const isEditingStable = !isNew && release?.stage === "stable";
+    const isStageBump = (!isNew && release && targetStage !== release.stage) || isEditingStable;
     const isFirstActive = major === 0 && targetStage === 'stable';
     const showMajor = isFirstActive || isFork;
 
@@ -272,7 +273,7 @@ export default function SuiteEditorProfile({
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => setIsSaveModalOpen(true)}
-                            disabled={!canEdit || saving || !hasChanges || !form.title.trim()}
+                            disabled={saving || !hasChanges || !form.title.trim()}
                             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50"
                         >
                             Publish
@@ -339,7 +340,7 @@ export default function SuiteEditorProfile({
                         placeholder="tag1, tag2"
                         value={form.tags}
                         onChange={(e) => setForm({ ...form, tags: e.target.value })}
-                        disabled={!canEdit || saving}
+                        disabled={saving}
                     />
                 </label>
             </div>
@@ -352,14 +353,14 @@ export default function SuiteEditorProfile({
                     className="mt-1.5 w-full text-base rounded-xl border border-gray-300 p-2.5 h-24 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
                     value={form.purpose}
                     onChange={(e) => setForm({ ...form, purpose: e.target.value })}
-                    disabled={!canEdit || saving}
+                    disabled={saving}
                 />
             </label>
 
             <FoundationSelector 
                 value={form.foundationRefURI || ""} 
                 onChange={uri => setForm(prev => ({ ...prev, foundationRefURI: uri }))} 
-                disabled={!canEdit || saving}
+                disabled={saving}
             />
 
             <div className="pt-4 border-t border-gray-100">
@@ -427,7 +428,7 @@ export default function SuiteEditorProfile({
                             </div>
                             <button
                                 onClick={() => removeProtocol(p.lineageId)}
-                                disabled={!canEdit || saving}
+                                disabled={saving}
                                 className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 shrink-0"
                             >
                                 <Trash2 className="w-4 h-4" />

@@ -112,7 +112,8 @@ export default function ProtocolEditorProfile({
     const nextMinor = `${major}.${minor + 1}.0`;
     const nextMajor = `${major + 1}.0.0`;
 
-    const isStageBump = !isNew && draft && targetStage !== draft.stage;
+    const isEditingStable = !isNew && draft?.stage === "stable";
+    const isStageBump = (!isNew && draft && targetStage !== draft.stage) || isEditingStable;
     const isFirstActive = major === 0 && targetStage === 'stable';
     const showMajor = isFirstActive || isFork;
 
@@ -275,7 +276,7 @@ export default function ProtocolEditorProfile({
                         placeholder="tag1, tag2"
                         value={form.tags}
                         onChange={(e) => setForm({ ...form, tags: e.target.value })}
-                        disabled={!canEdit || saving}
+                        disabled={saving}
                     />
                 </label>
             </div>
@@ -288,19 +289,19 @@ export default function ProtocolEditorProfile({
                     className="mt-1 w-full text-base rounded border border-gray-300 p-2 h-20 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
                     value={form.summary}
                     onChange={(e) => setForm({ ...form, summary: e.target.value })}
-                    disabled={!canEdit || saving}
+                    disabled={saving}
                 />
             </label>
 
             <FoundationSelector 
                 value={form.foundationRefURI} 
                 onChange={(uri) => setForm({ ...form, foundationRefURI: uri })}
-                disabled={!canEdit || saving} 
+                disabled={saving} 
             />
 
             <label className="block" htmlFor="protocol-body">
                 <div className="text-sm font-medium text-gray-700 mb-1">Body (Markdown)</div>
-                <div className={!canEdit || saving ? "opacity-60 pointer-events-none" : ""}>
+                <div className={saving ? "opacity-60 pointer-events-none" : ""}>
                     <TiptapEditor
                         content={form.body}
                         onChange={(value) => setForm({ ...form, body: value })}

@@ -100,7 +100,8 @@ export default function NeedEditorProfile({
     const nextMinor = `${major}.${minor + 1}.0`;
     const nextMajor = `${major + 1}.0.0`;
 
-    const isStageBump = !isNew && release && targetStage !== release.stage;
+    const isEditingStable = !isNew && release?.stage === "stable";
+    const isStageBump = (!isNew && release && targetStage !== release.stage) || isEditingStable;
     const isFirstActive = major === 0 && targetStage === 'stable';
     const showMajor = isFirstActive || isFork;
 
@@ -200,7 +201,7 @@ export default function NeedEditorProfile({
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => setIsSaveModalOpen(true)}
-                            disabled={!canEdit || saving || !hasChanges || !form.title.trim()}
+                            disabled={saving || !hasChanges || !form.title.trim()}
                             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50"
                         >
                             Publish
@@ -265,7 +266,7 @@ export default function NeedEditorProfile({
                         placeholder="tag1, tag2"
                         value={form.tags}
                         onChange={(e) => setForm({ ...form, tags: e.target.value })}
-                        disabled={!canEdit || saving}
+                        disabled={saving}
                     />
                 </label>
             </div>
@@ -278,19 +279,19 @@ export default function NeedEditorProfile({
                     className="mt-1.5 w-full text-base rounded-xl border border-gray-300 p-2.5 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none min-h-[100px] resize-y"
                     value={form.purpose}
                     onChange={(e) => setForm({ ...form, purpose: e.target.value })}
-                    disabled={!canEdit || saving}
+                    disabled={saving}
                 />
             </label>
 
             <FoundationSelector 
                 value={form.foundationRefURI} 
                 onChange={(uri) => setForm({ ...form, foundationRefURI: uri })}
-                disabled={!canEdit || saving} 
+                disabled={saving} 
             />
 
             <label className="block" htmlFor="need-description">
                 <div className="text-sm font-medium text-gray-700 mb-1">Description (Markdown)</div>
-                <div className={!canEdit || saving ? "opacity-60 pointer-events-none" : ""}>
+                <div className={saving ? "opacity-60 pointer-events-none" : ""}>
                     <TiptapEditor
                         content={form.description}
                         onChange={(value) => setForm({ ...form, description: value })}
