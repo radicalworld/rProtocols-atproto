@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams, Navigate, useMatch } from "react-router-dom";
 import { useRepo } from "@/domain/repo";
 import type { Protocol } from "@/domain/types";
@@ -35,6 +35,13 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
     
     // Live-binding state catching local draft changes rendering natively into static viewer panels concurrently.
     const [draftState, setDraftState] = useState<{tags: string[], uri: string} | null>(null);
+
+    const handleDraftChange = useCallback((draft: { tags: string[], foundationRefURI: string }) => {
+        setDraftState(prev => {
+            const isSame = prev?.uri === draft.foundationRefURI && prev?.tags.join(",") === draft.tags.join(",");
+            return isSame ? prev : { tags: draft.tags, uri: draft.foundationRefURI };
+        });
+    }, []);
 
     // Wire up dynamic tracking overlays to combat stale static JSON caches
     const { isFollowed } = useFollowed(p?.id ?? "", "protocol");
@@ -141,7 +148,7 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
                     <ProtocolEditorProfile 
                         protocolId={p.id} 
                         onClose={() => nav(`/${sectionId}/protocols/${encodeURIComponent(p.id)}`)} 
-                        onDraftChange={(draft) => setDraftState({ tags: draft.tags, uri: draft.foundationRefURI })}
+                        onDraftChange={handleDraftChange}
                     />
                 ) : (
                     <>

@@ -44,7 +44,9 @@ export default function ProtocolEditorProfile({
                 : form.tags.split(",").map(t => t.trim()).filter(Boolean);
             onDraftChange({ tags: arr, foundationRefURI: form.foundationRefURI });
         }
-    }, [form.tags, form.foundationRefURI, onDraftChange]);
+        // Exclude onDraftChange deliberately preventing React Maximum depth cascades
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [form.tags, form.foundationRefURI]);
     
     // Modal State
     const [searchParams] = useSearchParams();
