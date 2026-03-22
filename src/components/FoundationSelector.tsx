@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useRepo } from "@/domain/repo";
 import type { Suite } from "@/domain/types";
+import { Info } from "lucide-react";
+import { SuiteDrawer } from "./SuiteDrawer";
 
 export function FoundationSelector({
     value,
@@ -14,6 +16,7 @@ export function FoundationSelector({
     const repo = useRepo();
     const [suites, setSuites] = useState<Suite[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
     useEffect(() => {
         let alive = true;
@@ -40,8 +43,15 @@ export function FoundationSelector({
 
     return (
         <div className="mt-4 mb-2">
-            <div className="text-sm font-medium text-gray-700 mb-1.5">
-                Grounding Protocols
+            <div className="text-sm font-medium text-gray-700 mb-1.5 flex items-center justify-between">
+                <span>Grounding Protocols</span>
+                <button 
+                    type="button" 
+                    onClick={() => setIsDrawerOpen(true)} 
+                    className="text-xs text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 font-medium bg-blue-50/50 px-2.5 py-1 rounded-md transition-colors"
+                >
+                    <Info className="w-3.5 h-3.5 border-none" /> Review Selection
+                </button>
             </div>
             <div className="relative">
                 <select
@@ -70,6 +80,12 @@ export function FoundationSelector({
                 </div>
             </div>
             <p className="text-xs text-gray-500 mt-1.5">Select the foundational system granting semantic derivation context.</p>
+            
+            <SuiteDrawer 
+                suiteId={value || "suite-root-protocols"} 
+                isOpen={isDrawerOpen} 
+                onClose={() => setIsDrawerOpen(false)} 
+            />
         </div>
     );
 }
