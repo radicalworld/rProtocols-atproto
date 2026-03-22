@@ -317,7 +317,7 @@ export default function SuiteEditorProfile({
             </label>
 
             <div className="flex gap-6">
-                <label className="block w-1/3" htmlFor="suite-language">
+                <label className="block w-[140px] shrink-0" htmlFor="suite-language">
                     <div className="text-sm font-medium text-gray-700">Language <span className="text-xs text-gray-400 font-normal ml-1">(Locked)</span></div>
                     <input
                         id="suite-language"
@@ -330,7 +330,7 @@ export default function SuiteEditorProfile({
                     />
                 </label>
 
-                <label className="block w-2/3" htmlFor="suite-tags">
+                <label className="block flex-1" htmlFor="suite-tags">
                     <div className="text-sm font-medium text-gray-700">Tags (comma separated)</div>
                     <input
                         id="suite-tags"

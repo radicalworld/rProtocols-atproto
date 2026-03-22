@@ -250,7 +250,7 @@ export default function ProtocolEditorProfile({
             </label>
 
             <div className="flex gap-4">
-                <label className="block w-1/3" htmlFor="protocol-language">
+                <label className="block w-[140px] shrink-0" htmlFor="protocol-language">
                     <div className="text-sm font-medium text-gray-700">Language <span className="text-xs text-gray-400 font-normal ml-1">(Locked)</span></div>
                     <input
                         id="protocol-language"
@@ -263,7 +263,7 @@ export default function ProtocolEditorProfile({
                     />
                 </label>
 
-                <label className="block w-2/3" htmlFor="protocol-tags">
+                <label className="block flex-1" htmlFor="protocol-tags">
                     <div className="text-sm font-medium text-gray-700">Tags (comma separated)</div>
                     <input
                         id="protocol-tags"
