@@ -133,6 +133,8 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
     const history = release?.history ?? [];
     const attribution = release?.attribution ?? [];
     
+    const activeAttribution = attribution.length > 0 ? attribution : (did ? [{ name: "Publisher", did }] : []);
+    
     const displayFoundationUri = isEditing && draftState ? draftState.uri : ((p as any).foundationRef?.uri || (release as any)?.foundationRef?.uri || "rp_suite-root-protocols");
 
     if (notFound) return <Navigate to="/404" replace />;
@@ -271,11 +273,11 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
                             </div>
                         )}
 
-                        {attribution.length > 0 && (
+                        {activeAttribution.length > 0 && (
                             <div className="pt-2 border-t border-gray-100">
                                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Attribution</h3>
                                 <div className="flex flex-col gap-2">
-                                    {attribution.map((attr, idx) => (
+                                    {activeAttribution.map((attr, idx) => (
                                         <div key={idx} className="bg-gray-50 rounded-lg p-3 border border-gray-100 flex flex-col">
                                             <div className="text-sm font-semibold text-gray-900">{attr.name}</div>
                                             <div className="text-xs text-gray-500 font-mono mt-0.5 break-all">{attr.did}</div>

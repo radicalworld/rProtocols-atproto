@@ -77,6 +77,8 @@ export function NeedProfile() {
 
   const shortUrl = release?.shortUrl;
   const attribution = release?.attribution ?? [];
+  const publisherDid = release?.did || (n as any)?.did;
+  const activeAttribution = attribution.length > 0 ? attribution : (publisherDid ? [{ name: "Publisher", did: publisherDid }] : []);
   
   const date = release?.date ?? "";
   const versions = listNeedReleases(n.lineageId);
@@ -202,11 +204,11 @@ export function NeedProfile() {
                     </div>
                 )}
 
-                {attribution.length > 0 && (
+                {activeAttribution.length > 0 && (
                     <div className="pt-2 border-t border-gray-100">
                         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Attribution</h3>
                         <div className="flex flex-col gap-2">
-                            {attribution.map((attr, idx) => (
+                            {activeAttribution.map((attr, idx) => (
                                 <div key={idx} className="bg-gray-50 rounded-lg p-3 border border-gray-100 flex flex-col">
                                     <div className="text-sm font-semibold text-gray-900">{attr.name}</div>
                                     <div className="text-xs text-gray-500 font-mono mt-0.5 break-all">{attr.did}</div>
