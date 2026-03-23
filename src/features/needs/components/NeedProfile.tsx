@@ -74,6 +74,9 @@ export function NeedProfile() {
   
   const baseFollow = release?.followCount ?? 0;
   const followCount = isFollowed && baseFollow === 0 ? 1 : baseFollow;
+
+  const shortUrl = release?.shortUrl;
+  const attribution = release?.attribution ?? [];
   
   const date = release?.date ?? "";
   const versions = listNeedReleases(n.lineageId);
@@ -163,26 +166,51 @@ export function NeedProfile() {
             <h3 className="font-semibold text-gray-900 mb-4 border-b pb-2">Need Details</h3>
             <div className="flex flex-col gap-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="text-sm text-gray-600">
-                        <div className="font-medium text-gray-900">Release</div>
-                        <div>v{formatVersion(versionString)}{date ? ` · ${date}` : ""}{language ? ` · ${language}` : ""}</div>
+                    <div>
+                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Release</h3>
+                        <p className="text-sm text-gray-900 leading-relaxed">
+                            v{formatVersion(versionString)}{date ? ` · ${date}` : ""} · {language}
+                        </p>
                     </div>
-                    <div className="text-sm text-gray-600">
-                        <div className="font-medium text-gray-900">Signals</div>
-                        <div className="flex items-center gap-4">
-                            <span title="Followers">Follows: {followCount}</span>
-                        </div>
+                    <div>
+                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Signals</h3>
+                        <p className="text-sm text-gray-900 leading-relaxed">
+                            <span>Follows: {followCount}</span>
+                        </p>
                     </div>
                 </div>
 
-                {!!tags.length && (
-                    <div>
-                        <div className="text-sm font-medium text-gray-900">Tags</div>
-                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {tags.length > 0 && (
+                    <div className="pt-2 border-t border-gray-100">
+                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Tags</h3>
+                        <div className="flex flex-wrap gap-1.5">
                             {tags.map((t) => (
-                                <span key={t} className="rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-700 font-medium">
+                                <span key={t} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-600">
                                     {t}
                                 </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {shortUrl && (
+                    <div className="pt-2 border-t border-gray-100">
+                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Share</h3>
+                        <a href={`https://r.pro/${shortUrl}`} target="_blank" rel="noopener noreferrer" className="block text-sm text-blue-600 hover:underline mb-2">
+                            r.pro/{shortUrl}
+                        </a>
+                    </div>
+                )}
+
+                {attribution.length > 0 && (
+                    <div className="pt-2 border-t border-gray-100">
+                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Attribution</h3>
+                        <div className="flex flex-col gap-2">
+                            {attribution.map((attr, idx) => (
+                                <div key={idx} className="bg-gray-50 rounded-lg p-3 border border-gray-100 flex flex-col">
+                                    <div className="text-sm font-semibold text-gray-900">{attr.name}</div>
+                                    <div className="text-xs text-gray-500 font-mono mt-0.5 break-all">{attr.did}</div>
+                                </div>
                             ))}
                         </div>
                     </div>

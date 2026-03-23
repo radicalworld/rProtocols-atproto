@@ -229,90 +229,71 @@ export function ProtocolProfile({ protocolId: propId }: { protocolId?: string } 
                     <h3 className="font-semibold text-gray-900 mb-4 border-b pb-2">Protocol Details</h3>
                     <div className="flex flex-col gap-y-4">
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="text-sm text-gray-600">
-                                <div className="font-medium text-gray-900">Release</div>
-                                <div>v{formatVersion(versionString)}{date ? ` · ${date}` : ""}{language ? ` · ${language}` : ""}</div>
+                            <div>
+                                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Release</h3>
+                                <p className="text-sm text-gray-900 leading-relaxed">
+                                    v{formatVersion(versionString)}{date ? ` · ${date}` : ""} · {language}
+                                </p>
                             </div>
-                            <div className="text-sm text-gray-600">
-                                <div className="font-medium text-gray-900">Signals</div>
-                                <div className="flex items-center gap-4">
-                                    <span title="Followers">Follows: {followCount}</span>
-                                    <span title="Adoptions">Adopts: {adoptCount}</span>
-                                </div>
+                            <div>
+                                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Signals</h3>
+                                <p className="text-sm text-gray-900 leading-relaxed">
+                                    <span>Follows: {followCount}</span>
+                                    <span className="ml-3">Adopts: {adoptCount}</span>
+                                </p>
                             </div>
                         </div>
-                        {needLineageId && (
-                            <div className="text-sm text-gray-600">
-                            <div className="font-medium text-gray-900">Need</div>
-                            <div>{needLineageId}</div>
-                            </div>
-                        )}
-                        {scope?.region && (
-                            <div className="text-sm text-gray-600">
-                            <div className="font-medium text-gray-900">Region</div>
-                            <div>{scope.region.level}{scope.region.name ? ` · ${scope.region.name}` : ""}</div>
-                            </div>
-                        )}
-                        {cid && (
-                            <div className="text-sm text-gray-600">
-                            <div className="font-medium text-gray-900">CID Address</div>
-                            <div className="font-mono text-xs break-all bg-gray-50 p-1.5 rounded mt-1 border border-gray-100">{cid}</div>
-                            </div>
-                        )}
-                        {did && (
-                            <div className="text-sm text-gray-600">
-                            <div className="font-medium text-gray-900">Publisher DID</div>
-                            <div className="font-mono text-xs break-all bg-gray-50 p-1.5 rounded mt-1 border border-gray-100">{did}</div>
-                            </div>
-                        )}
+
                         {!!tags.length && (
-                            <div>
-                                <div className="text-sm font-medium text-gray-900">Tags</div>
-                                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                            <div className="pt-2 border-t border-gray-100">
+                                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Tags</h3>
+                                <div className="flex flex-wrap gap-1.5">
                                     {tags.map(t => (
-                                        <span key={t} className="rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-700 font-medium">
+                                        <span key={t} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-600">
                                             {t}
                                         </span>
                                     ))}
                                 </div>
                             </div>
                         )}
+
                         {(shortUrl || qrCode) && (
-                            <div className="text-sm text-gray-600">
-                                <div className="font-medium text-gray-900">Share</div>
-                                <div className="mt-1 flex items-center gap-3">
-                                    {shortUrl && (
-                                        <a className="text-blue-600 hover:underline" href={`https://${shortUrl.replace(/^https?:\/\//, "")}`} target="_blank" rel="noreferrer">
-                                            {shortUrl}
-                                        </a>
-                                    )}
-                                    {qrCode && <span className="text-xs text-gray-500">{qrCode}</span>}
+                            <div className="pt-2 border-t border-gray-100">
+                                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Share</h3>
+                                {shortUrl && (
+                                    <a href={`https://r.pro/${shortUrl}`} target="_blank" rel="noopener noreferrer" className="block text-sm text-blue-600 hover:underline mb-2">
+                                        r.pro/{shortUrl}
+                                    </a>
+                                )}
+                                {qrCode && (
+                                    <img src={qrCode} alt="QR Code" className="w-24 h-24 rounded-lg border border-gray-200" />
+                                )}
+                            </div>
+                        )}
+
+                        {attribution.length > 0 && (
+                            <div className="pt-2 border-t border-gray-100">
+                                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Attribution</h3>
+                                <div className="flex flex-col gap-2">
+                                    {attribution.map((attr, idx) => (
+                                        <div key={idx} className="bg-gray-50 rounded-lg p-3 border border-gray-100 flex flex-col">
+                                            <div className="text-sm font-semibold text-gray-900">{attr.name}</div>
+                                            <div className="text-xs text-gray-500 font-mono mt-0.5 break-all">{attr.did}</div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         )}
                         {related.length > 0 && (
-                            <div>
-                            <div className="text-sm font-medium text-gray-900">Related Protocols</div>
-                            <div className="mt-1.5 flex flex-wrap gap-2">
-                                {related.map(r => (
-                                <span key={r} className="rounded bg-blue-50 text-blue-700 px-2 py-1 text-xs font-medium">
-                                    {r}
-                                </span>
-                                ))}
-                            </div>
-                            </div>
-                        )}
-                        {attribution.length > 0 && (
-                            <div>
-                            <div className="text-sm font-medium text-gray-900 mb-1.5">Attribution</div>
-                            <ul className="space-y-2 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                {attribution.map(a => (
-                                <li key={a.did} className="text-xs text-gray-600 flex flex-col gap-0.5">
-                                    <span className="font-semibold text-gray-900">{a.name}</span>
-                                    <span className="font-mono text-[10px] text-gray-500">{a.did}</span>
-                                </li>
-                                ))}
-                            </ul>
+                            <div className="pt-2 border-t border-gray-100">
+                                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Related Protocols</h3>
+                                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                    {related.map(r => (
+                                        <span key={r} className="rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-700 font-medium tracking-wide">
+                                            {r}
+                                        </span>
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>

@@ -47,13 +47,18 @@ export function SuiteProfile({ suiteId: propId }: { suiteId?: string } = {}) {
   const followCount = isFollowed && baseFollow === 0 ? 1 : baseFollow;
 
   const { adopted: isAdopted } = useAdopted(suite?.lineageId ?? "", "suite");
-  const baseAdopt = suite?.adoptCount ?? 0;
-  const adoptCount = isAdopted && baseAdopt === 0 ? 1 : baseAdopt;
 
   if (!suite) return <div className="mx-auto max-w-4xl p-6">Loading suite…</div>;
 
   const selectedVersion = paramVersion ?? suite.version ?? latestSuiteVersion(suite.lineageId) ?? "1.0";
   const release = suite.release ?? getSuiteRelease(suite.lineageId, selectedVersion);
+  
+  const baseAdopt = release?.adoptCount ?? 0;
+  const adoptCount = isAdopted && baseAdopt === 0 ? 1 : baseAdopt;
+
+  const shortUrl = release?.shortUrl;
+  const attribution = release?.attribution ?? [];
+  const date = release?.date ?? "";
   
   const versionString = suite.release?.version ?? suite.version ?? release?.version ?? selectedVersion;
   const uiStage = (suite.release?.stage as any) ?? (suite.stage as any) ?? (release?.stage as any) ?? "draft";
@@ -169,15 +174,14 @@ export function SuiteProfile({ suiteId: propId }: { suiteId?: string } = {}) {
                     <div>
                         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Release</h3>
                         <p className="text-sm text-gray-900 leading-relaxed">
-                            v{versionString} &middot; {language || "en"}
+                            v{formatVersion(versionString)}{date ? ` · ${date}` : ""} · {language || "en"}
                         </p>
                     </div>
-                    
                     <div>
                         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Signals</h3>
                         <p className="text-sm text-gray-900 leading-relaxed">
-                            Follows: {followCount}
-                            <span className="block text-gray-900 mt-0.5">Adopts: {adoptCount}</span>
+                            <span>Follows: {followCount}</span>
+                            <span className="ml-3">Adopts: {adoptCount}</span>
                         </p>
                     </div>
                 </div>
@@ -190,6 +194,29 @@ export function SuiteProfile({ suiteId: propId }: { suiteId?: string } = {}) {
                                 <span key={t} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-600">
                                     {t}
                                 </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {shortUrl && (
+                    <div className="pt-2 border-t border-gray-100">
+                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Share</h3>
+                        <a href={`https://r.pro/${shortUrl}`} target="_blank" rel="noopener noreferrer" className="block text-sm text-blue-600 hover:underline mb-2">
+                            r.pro/{shortUrl}
+                        </a>
+                    </div>
+                )}
+
+                {attribution.length > 0 && (
+                    <div className="pt-2 border-t border-gray-100">
+                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Attribution</h3>
+                        <div className="flex flex-col gap-2">
+                            {attribution.map((attr, idx) => (
+                                <div key={idx} className="bg-gray-50 rounded-lg p-3 border border-gray-100 flex flex-col">
+                                    <div className="text-sm font-semibold text-gray-900">{attr.name}</div>
+                                    <div className="text-xs text-gray-500 font-mono mt-0.5 break-all">{attr.did}</div>
+                                </div>
                             ))}
                         </div>
                     </div>
